@@ -67,8 +67,7 @@ let localMockUser: AuthUser | null = (() => {
       return JSON.parse(saved);
     } catch (e) {}
   }
-  // Default to guest user so the user has immediate access
-  return GUEST_USER;
+  return null;
 })();
 
 const listeners: Array<(user: AuthUser | null) => void> = [];
@@ -84,7 +83,7 @@ export function subscribeAuth(callback: (user: AuthUser | null) => void) {
           const u: AuthUser = {
             uid: fbUser.uid,
             email: fbUser.email,
-            displayName: fbUser.displayName || 'Yaswanth',
+            displayName: fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
             photoURL: fbUser.photoURL,
           };
           localMockUser = u;
@@ -121,8 +120,13 @@ export async function loginWithGoogle(): Promise<AuthUser> {
     }
   }
 
-  // Fallback demo login
-  const u = GUEST_USER;
+  // Local user fallback
+  const u: AuthUser = {
+    uid: `user_${Date.now()}`,
+    email: 'user@local.device',
+    displayName: 'Local User',
+    photoURL: null,
+  };
   localMockUser = u;
   localStorage.setItem('meetingmind_auth_user', JSON.stringify(u));
   listeners.forEach((cb) => cb(u));

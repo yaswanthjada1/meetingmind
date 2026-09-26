@@ -6,18 +6,39 @@ import {
   Commitment,
   TaskItem,
   ReferencedResource,
-  MemoryEntry,
   MeetingAnalysis,
 } from '../types';
+import { audioProcessingService, CleanedAudioResult } from './audioProcessing';
+import { defaultTranscriptionProvider, TranscriptionResult } from './transcriptionProvider';
+import { resourceIngestion } from './resourceIngestion';
 import { analyzeMeetingContent } from './llm';
 import { indexMeetingMemories } from './memory';
+
+export type ProcessingPipelineStage =
+  | 'queued'
+  | 'saving_recording'
+  | 'cleaning_audio'
+  | 'transcribing'
+  | 'searching_resources'
+  | 'reasoning'
+  | 'completed'
+  | 'transcription_unavailable'
+  | 'error';
+
+export interface PipelineStageStatus {
+  id: string;
+  label: string;
+  status: 'pending' | 'active' | 'completed' | 'warning' | 'skipped' | 'failed';
+  detail?: string;
+}
 
 export interface ProcessingJob {
   meetingId: string;
   meetingTitle: string;
   progress: number; // 0 to 100
   step: string;
-  status: 'queued' | 'transcribing' | 'analyzing' | 'indexing' | 'completed' | 'error';
+  status: ProcessingPipelineStage;
+  stages: PipelineStageStatus[];
   error?: string;
 }
 
@@ -39,14 +60,18 @@ class ProcessingQueueManager {
   }
 
   getActiveJobs(): ProcessingJob[] {
-    return Array.from(this.jobs.values()).filter((j) => j.status !== 'completed' && j.status !== 'error');
+    return Array.from(this.jobs.values()).filter((j) => j.status !== 'completed' && j.status !== 'error' && j.status !== 'transcription_unavailable');
   }
 
   getAllJobs(): ProcessingJob[] {
     return Array.from(this.jobs.values());
   }
 
-  updateJob(meetingId: string, updates: Partial<ProcessingJob>) {
+  getJob(meetingId: string): ProcessingJob | undefined {
+    return this.jobs.get(meetingId);
+  }
+
+  private updateJob(meetingId: string, updates: Partial<ProcessingJob>) {
     const current = this.jobs.get(meetingId);
     if (current) {
       const updated = { ...current, ...updates };
@@ -55,36 +80,55 @@ class ProcessingQueueManager {
     }
   }
 
+  /**
+   * Enqueues a meeting for background processing.
+   * Runs asynchronously without blocking the user interface.
+   */
   async enqueue(
     meetingId: string,
     options: {
       audioBlob?: Blob;
-      uploadedFile?: File;
-      rawNotes?: string;
+      uploadedNotes?: string;
+      liveTranscriptChunks?: TranscriptChunk[];
       userId?: string;
     } = {}
   ): Promise<void> {
     const meeting = await db.meetings.get(meetingId);
     if (!meeting) return;
 
+    const initialStages: PipelineStageStatus[] = [
+      { id: 'recording', label: 'Recording saved', status: 'pending' },
+      { id: 'cleaning', label: 'Audio cleaning', status: 'pending' },
+      { id: 'transcription', label: 'Transcribing conversation', status: 'pending' },
+      { id: 'rag', label: 'Searching relevant resources', status: 'pending' },
+      { id: 'reasoning', label: 'Extracting decisions & commitments', status: 'pending' },
+      { id: 'summary', label: 'Generating meeting summary', status: 'pending' },
+    ];
+
     const job: ProcessingJob = {
       meetingId,
       meetingTitle: meeting.title,
       progress: 5,
-      step: 'Preparing audio and session buffer...',
+      step: 'Processing meeting...',
       status: 'queued',
+      stages: initialStages,
     };
+
     this.jobs.set(meetingId, job);
     this.notify();
 
-    // Run in background without blocking
+    // Fire processing in background
     this.processJob(meetingId, options).catch((err) => {
       console.error('Processing failed for meeting:', meetingId, err);
       this.updateJob(meetingId, {
         status: 'error',
         step: 'Processing failed',
-        error: err?.message || 'Unknown error',
+        error: err?.message || 'Processing failed',
       });
+      db.meetings.update(meetingId, {
+        meetingState: 'failed',
+        processingStep: `Failed: ${err?.message || 'Error'}`,
+      }).catch(() => {});
     });
   }
 
@@ -92,8 +136,8 @@ class ProcessingQueueManager {
     meetingId: string,
     options: {
       audioBlob?: Blob;
-      uploadedFile?: File;
-      rawNotes?: string;
+      uploadedNotes?: string;
+      liveTranscriptChunks?: TranscriptChunk[];
       userId?: string;
     }
   ) {
@@ -101,113 +145,215 @@ class ProcessingQueueManager {
     if (!meeting) return;
 
     const userId = options.userId || meeting.userId || 'default_user';
+    const stages: PipelineStageStatus[] = [
+      { id: 'recording', label: 'Recording saved', status: 'completed' },
+      { id: 'cleaning', label: 'Audio cleaning', status: 'active' },
+      { id: 'transcription', label: 'Transcribing conversation', status: 'pending' },
+      { id: 'rag', label: 'Searching relevant resources', status: 'pending' },
+      { id: 'reasoning', label: 'Extracting decisions & commitments', status: 'pending' },
+      { id: 'summary', label: 'Generating meeting summary', status: 'pending' },
+    ];
 
-    // Update meeting lifecycle in DB
     await db.meetings.update(meetingId, {
       meetingState: 'processing',
-      processingStep: 'Transcribing audio and recording stream...',
-      processingProgress: 20,
+      processingStep: 'Cleaning audio...',
+      processingProgress: 15,
     });
+
+    this.updateJob(meetingId, {
+      status: 'cleaning_audio',
+      progress: 15,
+      step: 'Cleaning audio...',
+      stages,
+    });
+
+    // 1. REAL AUDIO CLEANING (Web Audio API)
+    let cleanedAudio: CleanedAudioResult | null = null;
+    let cleaningErrorMsg: string | undefined = undefined;
+
+    if (options.audioBlob && options.audioBlob.size > 0) {
+      try {
+        cleanedAudio = await audioProcessingService.cleanAudio(options.audioBlob);
+      } catch (err: any) {
+        console.warn('Audio cleaning non-fatal error:', err);
+        cleaningErrorMsg = err?.message || 'Audio decoding unavailable';
+      }
+    }
+
+    if (cleanedAudio) {
+      stages[1].status = 'completed';
+      stages[1].detail = `Trimmed ${cleanedAudio.silenceTrimmedSec.toFixed(1)}s silence`;
+    } else if (cleaningErrorMsg) {
+      stages[1].status = 'warning';
+      stages[1].label = 'Audio cleaning unavailable';
+      stages[1].detail = 'Original audio preserved';
+    } else {
+      stages[1].status = 'completed';
+      stages[1].detail = 'Cleaned';
+    }
+    stages[2].status = 'active';
 
     this.updateJob(meetingId, {
       status: 'transcribing',
-      progress: 25,
-      step: 'Transcribing audio session...',
-    });
-
-    // 1. Audio / Notes extraction
-    let transcriptText = options.rawNotes || meeting.rawNotes || '';
-    let transcriptChunks: TranscriptChunk[] = [];
-
-    // If existing transcript in DB, load it
-    const existingChunks = await db.transcripts.where('meetingId').equals(meetingId).toArray();
-    if (existingChunks.length > 0) {
-      transcriptChunks = existingChunks;
-      transcriptText = existingChunks.map((c) => `${c.speaker} (${c.timestamp}): ${c.text}`).join('\n');
-    } else if (options.uploadedFile) {
-      // If a text/markdown file was uploaded as meeting notes
-      const fileExt = options.uploadedFile.name.split('.').pop()?.toLowerCase();
-      if (['txt', 'md', 'markdown', 'csv'].includes(fileExt || '')) {
-        transcriptText = await options.uploadedFile.text();
-      } else {
-        transcriptText = `Recording file ${options.uploadedFile.name} (${(options.uploadedFile.size / 1024).toFixed(0)} KB) processed on ${new Date().toLocaleTimeString()}.\nMeeting discussion completed on platform: ${meeting.platform || 'External'}.`;
-      }
-    }
-
-    if (!transcriptText && options.audioBlob) {
-      transcriptText = `Audio recording session (${Math.round(options.audioBlob.size / 1024)} KB) completed.\nMeeting discussion between ${meeting.participants.join(', ')} regarding ${meeting.title}.`;
-    }
-
-    if (!transcriptText) {
-      transcriptText = `Meeting "${meeting.title}" completed on ${meeting.date}.\nParticipants: ${meeting.participants.join(', ')}.\nDiscussion concluded with agreed next steps and action items.`;
-    }
-
-    // Generate segmented chunks if not present
-    if (transcriptChunks.length === 0) {
-      const lines = transcriptText.split('\n').filter((l) => l.trim().length > 0);
-      const parts = meeting.participants.length > 0 ? meeting.participants : ['Team Member', 'Organizer'];
-      transcriptChunks = lines.map((line, idx) => ({
-        id: `tc-${meetingId}-${idx}-${Date.now()}`,
-        userId,
-        meetingId,
-        speaker: line.includes(':') ? line.split(':')[0].trim() : parts[idx % parts.length],
-        text: line.includes(':') ? line.split(':').slice(1).join(':').trim() : line,
-        timestamp: `${String(Math.floor((idx * 2) / 60)).padStart(2, '0')}:${String((idx * 2) % 60).padStart(2, '0')}`,
-        createdAt: Date.now() + idx,
-      }));
-      await db.transcripts.bulkPut(transcriptChunks);
-    }
-
-    // 2. RAG Knowledge Match with user resources
-    this.updateJob(meetingId, {
-      status: 'analyzing',
-      progress: 55,
-      step: 'Retrieving relevant RAG knowledge and documents...',
+      progress: 35,
+      step: 'Transcribing conversation...',
+      stages: [...stages],
     });
 
     await db.meetings.update(meetingId, {
-      processingStep: 'Matching RAG resources & reasoning over context...',
-      processingProgress: 60,
+      processingStep: 'Transcribing conversation...',
+      processingProgress: 35,
     });
 
-    const userResources = await db.resources.where('userId').equals(userId).toArray();
-    const referencedResources: ReferencedResource[] = [];
+    // 2. DEPENDENCY-AWARE TRANSCRIPTION (DO NOT GUESS)
+    const transcriptResult: TranscriptionResult = await defaultTranscriptionProvider.transcribe({
+      audioBlob: cleanedAudio?.cleanedBlob || options.audioBlob,
+      liveTranscriptChunks: options.liveTranscriptChunks,
+      uploadedNotes: options.uploadedNotes,
+      meetingId,
+      userId,
+      participants: meeting.participants,
+    });
 
-    const lowerTranscript = transcriptText.toLowerCase();
-    for (const res of userResources) {
-      const titleLower = res.title.toLowerCase();
-      const filenameLower = res.filename.toLowerCase();
-      const words = titleLower.split(/[\s_.-]+/).filter((w) => w.length > 3);
+    // 3. CHECK TRANSCRIPTION AVAILABILITY
+    if (!transcriptResult.available || !transcriptResult.text.trim()) {
+      // RULE: Do not run reasoning if transcription failed.
+      // Accurate status:
+      // ✓ Recording saved
+      // ✓ Audio cleaned
+      // ⚠ Transcription unavailable
+      // ○ RAG analysis skipped
+      // ○ Decisions unavailable
+      // ○ Summary unavailable
+      stages[2].status = 'warning';
+      stages[2].detail = transcriptResult.reason || 'Transcription is not configured.';
+      stages[3].status = 'skipped';
+      stages[4].status = 'skipped';
+      stages[5].status = 'skipped';
 
-      const isMatch =
-        lowerTranscript.includes(titleLower) ||
-        lowerTranscript.includes(filenameLower) ||
-        words.some((w) => lowerTranscript.includes(w));
+      const reasonMsg = transcriptResult.reason || 'Audio captured successfully, but transcription is not configured.';
+      const fallbackSummary = cleaningErrorMsg
+        ? 'Audio was captured successfully. Audio cleaning was unavailable, so the original recording was preserved. Transcription is unavailable because no STT provider is configured.'
+        : 'Audio was captured and cleaned. Transcription is unavailable because no STT provider is configured.';
 
-      if (isMatch) {
-        referencedResources.push({
-          id: res.id,
-          title: res.title,
-          filename: res.filename,
-          snippet: res.contentSnippet,
-        });
-      }
+      this.updateJob(meetingId, {
+        status: 'transcription_unavailable',
+        progress: 100,
+        step: reasonMsg,
+        stages: [...stages],
+      });
+
+      await db.meetings.update(meetingId, {
+        meetingState: 'completed',
+        status: 'completed',
+        processingStep: reasonMsg,
+        processingProgress: 100,
+        summary: fallbackSummary,
+        updatedAt: Date.now(),
+      });
+
+      return;
     }
 
-    // 3. AI Analysis
+    // Transcription is genuine & available
+    stages[2].status = 'completed';
+    stages[2].detail = `${transcriptResult.chunks.length} chunks transcribed`;
+    stages[3].status = 'active';
+
     this.updateJob(meetingId, {
-      status: 'analyzing',
-      progress: 75,
-      step: 'Extracting decisions, commitments, tasks & summary...',
+      status: 'searching_resources',
+      progress: 60,
+      step: 'Searching relevant resources via RAG...',
+      stages: [...stages],
     });
 
-    const analysis: MeetingAnalysis = await analyzeMeetingContent(
-      meeting.title,
-      transcriptText,
-      meeting.participants
-    );
+    // Save actual transcript chunks in DB
+    if (transcriptResult.chunks.length > 0) {
+      await db.transcripts.bulkPut(transcriptResult.chunks);
+    }
 
-    // 4. Save extracted Decisions & Commitments to Dexie
+    // 4. REAL RAG RETRIEVAL (using qwen3-embedding:0.6b)
+    const referencedResources: ReferencedResource[] = [];
+    let resourceContext = '';
+
+    try {
+      const matchedChunks = await resourceIngestion.searchResources(
+        transcriptResult.text.substring(0, 500),
+        3,
+        userId
+      );
+
+      for (const m of matchedChunks) {
+        referencedResources.push({
+          id: m.chunk.resourceId,
+          title: m.resourceTitle,
+          filename: m.filename,
+          snippet: m.snippet,
+        });
+        resourceContext += `[Source: ${m.filename} - ${m.heading || 'Section'}]\n${m.chunk.text}\n\n`;
+      }
+    } catch (ragErr) {
+      console.warn('RAG search warning:', ragErr);
+    }
+
+    stages[3].status = 'completed';
+    stages[3].detail = `${referencedResources.length} relevant documents matched`;
+    stages[4].status = 'active';
+
+    this.updateJob(meetingId, {
+      status: 'reasoning',
+      progress: 75,
+      step: 'Extracting decisions & commitments with qwen3:8b...',
+      stages: [...stages],
+    });
+
+    await db.meetings.update(meetingId, {
+      processingStep: 'Reasoning over meeting content with qwen3:8b...',
+      processingProgress: 75,
+    });
+
+    // 5. REASONING WITH qwen3:8b
+    let analysis: MeetingAnalysis;
+    try {
+      analysis = await analyzeMeetingContent(
+        meeting.title,
+        transcriptResult.text,
+        meeting.participants,
+        resourceContext
+      );
+    } catch (llmErr: any) {
+      stages[4].status = 'failed';
+      stages[4].detail = 'Reasoning failed';
+      stages[5].status = 'skipped';
+
+      this.updateJob(meetingId, {
+        status: 'error',
+        progress: 100,
+        step: `Analysis failed: ${llmErr?.message || 'Invalid structured output'}`,
+        stages: [...stages],
+        error: llmErr?.message,
+      });
+
+      await db.meetings.update(meetingId, {
+        meetingState: 'failed',
+        processingStep: 'Meeting analysis failed — model returned invalid structured output.',
+        rawNotes: transcriptResult.text,
+      });
+      return;
+    }
+
+    stages[4].status = 'completed';
+    stages[4].detail = `${analysis.decisions.length} decisions, ${analysis.commitments.length} commitments`;
+    stages[5].status = 'active';
+
+    this.updateJob(meetingId, {
+      status: 'reasoning',
+      progress: 90,
+      step: 'Saving structured meeting intelligence...',
+      stages: [...stages],
+    });
+
+    // 6. SAVE STRUCTURED DECISIONS, COMMITMENTS & TASKS
     const decisions: Decision[] = (analysis.decisions || []).map((d, idx) => ({
       id: `dec-${meetingId}-${idx}-${Date.now()}`,
       userId,
@@ -234,7 +380,6 @@ class ProcessingQueueManager {
       priority: 'high',
     }));
 
-    // Create tasks in Task Tracker
     const tasks: TaskItem[] = commitments.map((c, idx) => ({
       id: `task-${meetingId}-${idx}-${Date.now()}`,
       userId,
@@ -252,16 +397,10 @@ class ProcessingQueueManager {
     if (commitments.length > 0) await db.commitments.bulkPut(commitments);
     if (tasks.length > 0) await db.tasks.bulkPut(tasks);
 
-    // 5. Index in Long-Term Memory
-    this.updateJob(meetingId, {
-      status: 'indexing',
-      progress: 90,
-      step: 'Indexing meeting memory into local RAG vector store...',
-    });
-
+    // Save final meeting record
     const updatedMeeting: Meeting = {
       ...meeting,
-      summary: analysis.summary || `Meeting completed: ${meeting.title}`,
+      summary: analysis.summary,
       importantPoints: analysis.importantPoints || [],
       decisions,
       commitments,
@@ -270,29 +409,32 @@ class ProcessingQueueManager {
       conflicts: analysis.conflicts || [],
       unresolvedQuestions: (analysis.questions || []).filter((q) => !q.answered).map((q) => q.question),
       resourcesReferenced: referencedResources,
-      rawNotes: transcriptText,
+      rawNotes: transcriptResult.text,
       status: 'completed',
       meetingState: 'completed',
-      processingStep: 'Ready',
+      processingStep: 'Processed',
       processingProgress: 100,
       updatedAt: Date.now(),
     };
 
     await db.meetings.put(updatedMeeting);
-    await indexMeetingMemories(updatedMeeting);
 
-    // 6. Complete
+    // Index memories for chatbot & future cross-meeting queries
+    try {
+      await indexMeetingMemories(updatedMeeting);
+    } catch (e) {
+      console.warn('Memory indexing error:', e);
+    }
+
+    stages[5].status = 'completed';
+    stages[5].detail = 'Executive summary ready';
+
     this.updateJob(meetingId, {
       status: 'completed',
       progress: 100,
       step: '✓ Meeting intelligence ready',
+      stages: [...stages],
     });
-
-    // Remove from active queue after 8 seconds
-    setTimeout(() => {
-      this.jobs.delete(meetingId);
-      this.notify();
-    }, 8000);
   }
 }
 

@@ -50,11 +50,11 @@ export const VoiceChatDrawer: React.FC<VoiceChatDrawerProps> = ({
     {
       id: 'm-init',
       sender: 'agent',
-      text: 'Hello Yaswanth. I am your MeetingMind Coordinator. You can ask me about previous decisions, overdue commitments, schedule conflict checks, or what happened while you were away.',
+      text: 'Hello! I am your MeetingMind Coordinator. You can ask me about previous decisions, overdue commitments, schedule conflict checks, or what happened while you were away.',
       suggestedFollowUps: [
         'What did we decide about authentication?',
         'Who still has unfinished work?',
-        'Schedule a 30-minute meeting with Rahul tomorrow at 4',
+        'What are the open commitments for this week?',
       ],
       timestamp: 'Now',
     },

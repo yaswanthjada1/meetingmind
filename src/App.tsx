@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, ensureSettings } from './db';
 import { subscribeAuth, logoutUser, AuthUser } from './services/firebase';
-import { populateDemoData } from './db/demoData';
 import { Header } from './components/Header';
 import { CalendarDashboard } from './components/CalendarDashboard';
 import { MeetingsHistoryView } from './components/MeetingsHistoryView';
@@ -11,9 +10,9 @@ import { ResourcesView } from './components/ResourcesView';
 import { TasksView } from './components/TasksView';
 import { DelegateView } from './components/DelegateView';
 import { LoginView } from './components/LoginView';
-import { DemoTourModal } from './components/DemoTourModal';
 import { SettingsModal } from './components/SettingsModal';
 import { AddExistingMeetingModal } from './components/AddExistingMeetingModal';
+import { DiagnosticPanelModal } from './components/DiagnosticPanelModal';
 import { FloatingChatbot } from './components/FloatingChatbot';
 import { Meeting, CalendarEvent } from './types';
 
@@ -25,9 +24,9 @@ export function App() {
   const [activeTab, setActiveTab] = useState<'calendar' | 'meetings' | 'resources' | 'tasks' | 'delegate'>('calendar');
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
 
-  // Modals & Tour
-  const [isDemoTourOpen, setIsDemoTourOpen] = useState(false);
+  // Modals
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
   const [isAddMeetingOpen, setIsAddMeetingOpen] = useState(false);
   const [addMeetingInitialDate, setAddMeetingInitialDate] = useState<string | undefined>(undefined);
 
@@ -53,7 +52,6 @@ export function App() {
       }
     });
 
-    // Clean startup — no mock data preloaded
     return () => {
       if (unsub) unsub();
     };
@@ -76,31 +74,6 @@ export function App() {
     // LiveQuery will automatically update the state
   };
 
-  const handleLoadDemoData = async () => {
-    if (!userId) return;
-    await populateDemoData(userId);
-  };
-
-  const handleClearDemoData = async () => {
-    if (!userId) return;
-    await db.transaction('rw', [
-      db.meetings, db.transcripts, db.decisions, db.commitments,
-      db.tasks, db.people, db.calendarEvents, db.resources,
-      db.memories, db.delegateSessions,
-    ], async () => {
-      await db.meetings.where('userId').equals(userId).delete();
-      await db.transcripts.where('userId').equals(userId).delete();
-      await db.decisions.where('userId').equals(userId).delete();
-      await db.commitments.where('userId').equals(userId).delete();
-      await db.tasks.where('userId').equals(userId).delete();
-      await db.calendarEvents.where('userId').equals(userId).delete();
-      await db.resources.where('userId').equals(userId).delete();
-      await db.memories.where('userId').equals(userId).delete();
-      await db.delegateSessions.where('userId').equals(userId).delete();
-    });
-    setSelectedMeetingId(null);
-  };
-
   const handleOpenAddMeeting = (initialDate?: string) => {
     setAddMeetingInitialDate(initialDate);
     setIsAddMeetingOpen(true);
@@ -120,11 +93,9 @@ export function App() {
         }}
         currentUser={currentUser}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onStartDemoTour={() => setIsDemoTourOpen(true)}
+        onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
         onSignOut={() => logoutUser()}
         onOpenLogin={() => setCurrentUser(null)}
-        onLoadDemoData={handleLoadDemoData}
-        onClearDemoData={handleClearDemoData}
         onSelectMeeting={(id) => setSelectedMeetingId(id)}
       />
 
@@ -181,6 +152,7 @@ export function App() {
 
       {/* Global Floating Chatbot for Instant Meeting Intelligence & Memory Queries */}
       <FloatingChatbot
+        userId={userId}
         currentContext={{
           tab: activeTab,
           meetingTitle: selectedMeeting?.title,
@@ -189,22 +161,18 @@ export function App() {
         }}
       />
 
-      {/* Interactive Guided Demo Tour Overlay */}
-      <DemoTourModal
-        isOpen={isDemoTourOpen}
-        onClose={() => setIsDemoTourOpen(false)}
-        onNavigateTab={(tab) => {
-          setActiveTab(tab);
-          setSelectedMeetingId(null);
-        }}
-        onSelectMeeting={(id) => setSelectedMeetingId(id)}
-      />
-
       {/* Settings & Privacy Modal */}
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         onReloadData={() => setSelectedMeetingId(null)}
+      />
+
+      {/* Diagnostic & Health Modal */}
+      <DiagnosticPanelModal
+        isOpen={isDiagnosticsOpen}
+        onClose={() => setIsDiagnosticsOpen(false)}
+        userId={userId}
       />
 
       {/* Add Existing External Meeting Modal */}

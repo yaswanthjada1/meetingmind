@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Volume2,
   VolumeX,
+  Loader2,
 } from 'lucide-react';
 import { coordinator } from '../agent/coordinator';
 import { speechService } from '../services/speech';
@@ -16,6 +17,7 @@ import { AgentEvidence } from '../types';
 import { EvidenceModal } from './EvidenceModal';
 
 interface FloatingChatbotProps {
+  userId?: string;
   currentContext?: {
     tab: string;
     meetingTitle?: string;
@@ -26,7 +28,7 @@ interface FloatingChatbotProps {
   forceOpen?: boolean;
 }
 
-export const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ currentContext, forceOpen }) => {
+export const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ userId = 'default_user', currentContext, forceOpen }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<
     Array<{ id: string; sender: 'user' | 'agent'; text: string; evidence?: AgentEvidence }>
@@ -41,7 +43,19 @@ export const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ currentContext
   const [isThinking, setIsThinking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [selectedEvidence, setSelectedEvidence] = useState<AgentEvidence | null>(null);
+  const [thinkingSeconds, setThinkingSeconds] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let timer: any;
+    if (isThinking) {
+      setThinkingSeconds(0);
+      timer = setInterval(() => {
+        setThinkingSeconds((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [isThinking]);
 
   useEffect(() => {
     if (forceOpen) {
@@ -88,7 +102,7 @@ export const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ currentContext
         contextualPrompt = `Regarding uploaded project resources: ${q}`;
       }
 
-      const response = await coordinator.process(contextualPrompt);
+      const response = await coordinator.process(contextualPrompt, userId);
 
       const agentMsg = {
         id: `agt-${Date.now()}`,
@@ -205,9 +219,9 @@ export const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ currentContext
               ))}
 
               {isThinking && (
-                <div className="text-[11px] text-zinc-400 font-mono flex items-center gap-1.5 p-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-600 animate-pulse" />
-                  <span>Thinking...</span>
+                <div className="text-[11px] text-zinc-600 font-mono flex items-center gap-2 p-2 bg-zinc-100/90 rounded-lg border border-zinc-200/80 shadow-2xs">
+                  <Loader2 className="w-3.5 h-3.5 text-zinc-800 animate-spin shrink-0" />
+                  <span>Thinking with local AI… ({thinkingSeconds}s)</span>
                 </div>
               )}
               <div ref={messagesEndRef} />

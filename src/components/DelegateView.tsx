@@ -119,13 +119,13 @@ export const DelegateView: React.FC<DelegateViewProps> = ({ userId = '', onSelec
             </div>
             <div>
               <div className="font-semibold text-xs text-zinc-900 uppercase tracking-wider">
-                Conflict Detected for Tomorrow 11:00 AM
+                Simulated Calendar Conflict
               </div>
               <p className="text-xs text-zinc-700 mt-0.5">
-                You have a conflicting meeting (<strong>Client Partner Zoom</strong>) during <strong>Team Alpha — Sprint Architecture & Sync</strong>.
+                A scheduling conflict has been detected during an upcoming meeting.
               </p>
               <p className="text-xs font-medium text-zinc-900 mt-1">
-                You're unavailable. Should MeetingMind attend as your AI Delegate?
+                You're unavailable. Would you like MeetingMind to attend as your AI Delegate?
               </p>
             </div>
           </div>
@@ -236,7 +236,7 @@ export const DelegateView: React.FC<DelegateViewProps> = ({ userId = '', onSelec
       </div>
 
       {/* Attended Sessions Selector & Briefing View */}
-      {sessions.length > 0 && (
+      {sessions.length > 0 ? (
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
             <span className="text-xs font-mono text-zinc-400 whitespace-nowrap">
@@ -263,6 +263,23 @@ export const DelegateView: React.FC<DelegateViewProps> = ({ userId = '', onSelec
               onSelectMeeting={onSelectMeeting}
             />
           )}
+        </div>
+      ) : (
+        <div className="border border-dashed border-zinc-200 rounded-lg p-10 text-center bg-white">
+          <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center mx-auto mb-3 text-zinc-400">
+            <Bot className="w-5 h-5" />
+          </div>
+          <h3 className="text-sm font-medium text-zinc-800 mb-1">No AI Delegate Briefings Yet</h3>
+          <p className="text-xs text-zinc-500 max-w-md mx-auto mb-4">
+            When you're unavailable for a meeting, your AI Delegate can attend on your behalf according to your deterministic permission boundaries and generate a post-meeting briefing.
+          </p>
+          <button
+            onClick={() => setIsSimModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-zinc-900 text-white hover:bg-zinc-800 rounded-md transition-all shadow-2xs"
+          >
+            <Play className="w-3.5 h-3.5" />
+            <span>Launch Simulated Meeting</span>
+          </button>
         </div>
       )}
 

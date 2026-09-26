@@ -26,16 +26,16 @@ export const SimulatedMeetingModal: React.FC<SimulatedMeetingModalProps> = ({
   permissions,
   userId = '',
 }) => {
-  const [meetingTitle, setMeetingTitle] = useState('Project Alpha — API Discussion');
-  const [activeSpeaker, setActiveSpeaker] = useState('Rahul');
+  const [meetingTitle, setMeetingTitle] = useState('Sync & Architecture Discussion');
+  const [activeSpeaker, setActiveSpeaker] = useState('Team Member');
   const [inputMessage, setInputMessage] = useState('');
   const [transcript, setTranscript] = useState<TranscriptChunk[]>([
     {
       id: 'st-1',
       meetingId: 'sim-current',
       timestamp: '00:02',
-      speaker: 'Rahul',
-      text: 'Welcome team. Since Yaswanth is unavailable, MeetingMind AI Delegate is attending on his behalf.',
+      speaker: 'System',
+      text: 'Meeting started. MeetingMind AI Delegate is attending on your behalf with active permission boundaries.',
       createdAt: 1,
     },
   ]);
@@ -73,7 +73,8 @@ export const SimulatedMeetingModal: React.FC<SimulatedMeetingModalProps> = ({
       speaker,
       text,
       newTranscript,
-      permissions
+      permissions,
+      userId
     );
 
     const delegateChunk: TranscriptChunk = {
@@ -101,10 +102,19 @@ export const SimulatedMeetingModal: React.FC<SimulatedMeetingModalProps> = ({
   };
 
   const handleEndMeeting = async () => {
+    const participants = Array.from(
+      new Set(
+        transcript
+          .map((t) => t.speaker)
+          .filter((s) => s && !s.includes('Delegate') && s !== 'System')
+      )
+    );
+    if (participants.length === 0) participants.push(activeSpeaker || 'Team');
+
     const session = await finalizeDelegateSession(
       meetingTitle,
-      42,
-      ['Rahul', 'Priya', 'Alex'],
+      Math.max(5, Math.round(transcript.length * 3.5)),
+      participants,
       transcript,
       actionsLog,
       needsAttentionList,
@@ -126,7 +136,7 @@ export const SimulatedMeetingModal: React.FC<SimulatedMeetingModalProps> = ({
                 Simulated Meeting Room
               </h3>
               <span className="text-[10px] font-mono text-zinc-500 bg-zinc-200 px-1.5 py-0.2 rounded">
-                Attending for Yaswanth
+                Attending on your behalf
               </span>
             </div>
             <p className="text-[11px] text-zinc-400 font-mono mt-0.5">{meetingTitle}</p>
@@ -140,20 +150,20 @@ export const SimulatedMeetingModal: React.FC<SimulatedMeetingModalProps> = ({
           </button>
         </div>
 
-        {/* Demo Prompts Bar for quick testing */}
+        {/* Quick Test Scenarios Bar */}
         <div className="px-4 py-2 bg-zinc-100/70 border-b border-zinc-200 flex flex-wrap items-center gap-1.5 text-xs">
           <span className="text-[11px] font-mono text-zinc-500 font-semibold mr-1">Test Scenarios:</span>
           <button
             onClick={() =>
-              handleSendTurn('What did Yaswanth suggest for authentication in the previous discussion?', 'Rahul')
+              handleSendTurn('What was decided regarding the system architecture in our previous discussion?', activeSpeaker)
             }
             className="px-2 py-1 rounded bg-white hover:bg-zinc-50 border border-zinc-200 text-zinc-800 text-[11px]"
           >
-            1. Ask Auth (ALLOW)
+            1. Query Decisions (ALLOW)
           </button>
           <button
             onClick={() =>
-              handleSendTurn('Can we move the deployment deadline from Friday to Monday?', 'Rahul')
+              handleSendTurn('Can we move the project milestone deadline from Friday to next week?', activeSpeaker)
             }
             className="px-2 py-1 rounded bg-white hover:bg-zinc-50 border border-zinc-200 text-zinc-800 text-[11px]"
           >
@@ -161,11 +171,11 @@ export const SimulatedMeetingModal: React.FC<SimulatedMeetingModalProps> = ({
           </button>
           <button
             onClick={() =>
-              handleSendTurn('Can we switch our primary database to MongoDB?', 'Alex')
+              handleSendTurn('Can we switch the database to a completely different stack?', activeSpeaker)
             }
             className="px-2 py-1 rounded bg-white hover:bg-zinc-50 border border-zinc-200 text-zinc-800 text-[11px]"
           >
-            3. Change Database (DENY)
+            3. Propose Tech Change (DENY)
           </button>
         </div>
 
@@ -201,15 +211,13 @@ export const SimulatedMeetingModal: React.FC<SimulatedMeetingModalProps> = ({
         {/* Bottom Input & Meeting Control */}
         <div className="p-3 bg-zinc-50 border-t border-zinc-200 space-y-2">
           <div className="flex items-center gap-2">
-            <select
+            <input
+              type="text"
               value={activeSpeaker}
               onChange={(e) => setActiveSpeaker(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded-md border border-zinc-200 bg-white font-mono text-zinc-700"
-            >
-              <option value="Rahul">Rahul (Backend)</option>
-              <option value="Priya">Priya (Design)</option>
-              <option value="Alex">Alex (DevOps)</option>
-            </select>
+              placeholder="Speaker name"
+              className="text-xs px-2.5 py-1.5 rounded-md border border-zinc-200 bg-white font-mono text-zinc-700 w-32"
+            />
 
             <input
               type="text"

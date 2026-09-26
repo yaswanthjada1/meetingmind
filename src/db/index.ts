@@ -8,10 +8,12 @@ import {
   Person,
   CalendarEvent,
   ResourceDocument,
+  ResourceChunk,
   MemoryEntry,
   DelegateSession,
   AppSettings,
   DelegatePermissions,
+  MeetingRecording,
 } from '../types';
 
 export const DEFAULT_PERMISSIONS: DelegatePermissions = {
@@ -28,7 +30,7 @@ export const DEFAULT_PERMISSIONS: DelegatePermissions = {
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'current_settings',
   userId: 'default_user',
-  ollamaEndpoint: 'http://localhost:11434',
+  ollamaEndpoint: '/ollama',
   ollamaModel: 'qwen3:8b',
   embeddingModel: 'qwen3-embedding:0.6b',
   userProfile: {
@@ -57,14 +59,15 @@ export class MeetingMindDatabase extends Dexie {
   calendarEvents!: Table<CalendarEvent, string>;
   resources!: Table<ResourceDocument, string>;
   resourceFiles!: Table<{ id: string; userId: string; resourceId: string; blob: Blob; filename: string; mimeType: string; sizeBytes: number; createdAt: number }, string>;
-  resourceChunks!: Table<{ id: string; userId: string; resourceId: string; resourceTitle: string; filename: string; text: string; index: number; pageNumber?: number; heading?: string; section?: string; tokenCount?: number; createdAt: number }, string>;
+  resourceChunks!: Table<ResourceChunk, string>;
   memories!: Table<MemoryEntry, string>;
   delegateSessions!: Table<DelegateSession, string>;
+  recordings!: Table<MeetingRecording, string>;
   settings!: Table<AppSettings, string>;
 
   constructor() {
     super('MeetingMindLocalDB');
-    this.version(4).stores({
+    this.version(5).stores({
       meetings: 'id, userId, title, date, status, meetingState, createdAt',
       transcripts: 'id, userId, meetingId, timestamp, speaker, createdAt',
       decisions: 'id, userId, sourceMeetingId, status, date',
@@ -77,6 +80,7 @@ export class MeetingMindDatabase extends Dexie {
       resourceChunks: 'id, userId, resourceId, index, heading',
       memories: 'id, userId, category, sourceMeetingId, resourceId, timestamp',
       delegateSessions: 'id, userId, meetingTitle, date, createdAt',
+      recordings: 'recordingId, meetingId, userId, createdAt',
       settings: 'id, userId',
     });
   }

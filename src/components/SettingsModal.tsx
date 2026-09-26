@@ -182,7 +182,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               value={settings.ollamaModel}
               onChange={(e) => setSettings({ ...settings, ollamaModel: e.target.value })}
               className="w-full text-xs px-3 py-1.5 rounded-md border border-zinc-200 font-mono"
-              placeholder="qwen2.5:3b"
+              placeholder="qwen3:8b"
             />
           </div>
         </div>

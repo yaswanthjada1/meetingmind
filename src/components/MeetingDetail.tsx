@@ -10,21 +10,21 @@ import {
 } from '../types';
 import { db } from '../db';
 import { coordinator } from '../agent/coordinator';
-import { recordingService, RecordingState, RecordingSourceType } from '../services/recordingService';
-import { processingQueue } from '../services/processingPipeline';
+import { recordingManager, RecordingServiceSnapshot, CaptureMode } from '../services/recordingService';
+import { processingQueue, ProcessingJob, PipelineStageStatus } from '../services/processingPipeline';
+import { formatDisplayDate } from '../utils/dateUtils';
 import {
   ArrowLeft,
   Calendar,
   Clock,
   Video,
   Users,
-  Link,
+  ExternalLink,
   Mic,
-  MicOff,
   Upload,
-  Play,
-  Pause,
   Square,
+  Pause,
+  Play,
   CheckCircle2,
   Circle,
   FileText,
@@ -34,9 +34,8 @@ import {
   Send,
   ChevronDown,
   ChevronUp,
-  FileAudio,
-  Radio,
-  ExternalLink,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 
 interface MeetingDetailProps {
@@ -50,30 +49,31 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
   onBack,
   onUpdate,
 }) => {
-  const [recordingState, setRecordingState] = useState<RecordingState>('idle');
-  const [recDuration, setRecDuration] = useState(0);
-  const [isProcessing, setIsProcessing] = useState(meeting.meetingState === 'processing');
-  const [processingStep, setProcessingStep] = useState(meeting.processingStep || 'Processing...');
-  const [processingProgress, setProcessingProgress] = useState(meeting.processingProgress || 0);
+  // Global Recording Manager state
+  const [recSnapshot, setRecSnapshot] = useState<RecordingServiceSnapshot>(recordingManager.getSnapshot());
+  const isThisMeetingRecording = recSnapshot.activeMeetingId === meeting.id && (recSnapshot.state === 'recording' || recSnapshot.state === 'paused');
+
+  // Background Processing state
+  const [processingJob, setProcessingJob] = useState<ProcessingJob | undefined>(processingQueue.getJob(meeting.id));
 
   // Transcript state
   const [transcripts, setTranscripts] = useState<TranscriptChunk[]>([]);
   const [showFullTranscript, setShowFullTranscript] = useState(false);
 
-  // Tasks local state for interactive toggling
+  // Tasks local state
   const [tasks, setTasks] = useState<TaskItem[]>([]);
 
-  // In-Meeting Chat
+  // In-Meeting Chat state
   const [chatQuery, setChatQuery] = useState('');
   const [chatMessages, setChatMessages] = useState<
-    Array<{ sender: 'user' | 'agent'; text: string; time: string }>
+    Array<{ sender: 'user' | 'agent'; text: string; time: string; sources?: string[] }>
   >([]);
   const [isAnswering, setIsAnswering] = useState(false);
 
-  // File upload ref
+  // File upload ref for notes / audio
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load meeting transcripts & tasks
+  // Load meeting transcripts & tasks from IndexedDB
   const loadMeetingData = async () => {
     const tr = await db.transcripts.where('meetingId').equals(meeting.id).toArray();
     setTranscripts(tr);
@@ -85,28 +85,23 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
   useEffect(() => {
     loadMeetingData();
 
-    // Subscribe to recording state
-    const unsubRec = recordingService.subscribe((st, dur) => {
-      setRecordingState(st);
-      setRecDuration(dur);
+    // Subscribe to global recording manager
+    const unsubRec = recordingManager.subscribe((snap) => {
+      setRecSnapshot(snap);
     });
 
     // Subscribe to background processing queue
     const unsubProc = processingQueue.subscribe((jobs) => {
       const currentJob = jobs.find((j) => j.meetingId === meeting.id);
-      if (currentJob) {
-        setIsProcessing(true);
-        setProcessingStep(currentJob.step);
-        setProcessingProgress(currentJob.progress);
-        if (currentJob.status === 'completed') {
-          setIsProcessing(false);
-          db.meetings.get(meeting.id).then((fresh) => {
-            if (fresh) {
-              onUpdate(fresh);
-              loadMeetingData();
-            }
-          });
-        }
+      setProcessingJob(currentJob);
+
+      if (currentJob?.status === 'completed' || currentJob?.status === 'transcription_unavailable') {
+        db.meetings.get(meeting.id).then((fresh) => {
+          if (fresh) {
+            onUpdate(fresh);
+            loadMeetingData();
+          }
+        });
       }
     });
 
@@ -116,69 +111,65 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
     };
   }, [meeting.id]);
 
-  // Start recording
-  const handleStartRecording = async (sourceType: RecordingSourceType = 'microphone') => {
-    const ok = await recordingService.start(sourceType);
-    if (ok) {
-      await db.meetings.update(meeting.id, {
-        meetingState: 'recording',
-      });
-    }
+  // Direct user-initiated capture: Tab Audio (getDisplayMedia)
+  const handleEnableTabAudioCapture = async () => {
+    await recordingManager.startTabAudioCapture(meeting.id, meeting.userId || 'default_user');
   };
 
-  // Pause / Resume
-  const handlePauseResume = () => {
-    if (recordingState === 'recording') {
-      recordingService.pause();
-    } else if (recordingState === 'paused') {
-      recordingService.resume();
-    }
+  // Direct user-initiated capture: Microphone (getUserMedia)
+  const handleStartMicrophoneCapture = async () => {
+    await recordingManager.startMicrophoneCapture(meeting.id, meeting.userId || 'default_user');
   };
 
   // Stop recording & enqueue background processing
-  const handleStopAndProcess = async () => {
-    const audioBlob = await recordingService.stop();
-    setIsProcessing(true);
-    setProcessingStep('Recording stopped. Enqueueing background intelligence pipeline...');
-    setProcessingProgress(15);
-
-    await db.meetings.update(meeting.id, {
-      meetingState: 'processing',
-      processingStep: 'Processing meeting...',
-      processingProgress: 15,
-    });
+  const handleStopRecording = async () => {
+    const record = await recordingManager.stopRecording();
+    const liveChunks = recordingManager.getLiveTranscriptChunks();
 
     await processingQueue.enqueue(meeting.id, {
-      audioBlob: audioBlob || undefined,
+      audioBlob: record?.blob,
+      liveTranscriptChunks: liveChunks,
       userId: meeting.userId,
     });
   };
 
-  // File upload handler
+  // Upload meeting recording or transcript notes
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     const file = files[0];
-    setIsProcessing(true);
-    setProcessingStep(`Uploading ${file.name} and starting processing...`);
-    setProcessingProgress(20);
+    const isText = file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.csv');
 
-    await db.meetings.update(meeting.id, {
-      meetingState: 'processing',
-      processingStep: 'Transcribing uploaded recording...',
-      processingProgress: 20,
-    });
-
-    await processingQueue.enqueue(meeting.id, {
-      uploadedFile: file,
-      userId: meeting.userId,
-    });
+    if (isText) {
+      const notesText = await file.text();
+      await processingQueue.enqueue(meeting.id, {
+        uploadedNotes: notesText,
+        userId: meeting.userId,
+      });
+    } else {
+      await processingQueue.enqueue(meeting.id, {
+        audioBlob: file,
+        userId: meeting.userId,
+      });
+    }
 
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Toggle task completed state
+  // Open external meeting link safely in new tab
+  const handleOpenMeetingLink = () => {
+    const url = meeting.meetingUrl || meeting.meetingLink;
+    if (!url) return;
+    try {
+      const valid = new URL(url);
+      window.open(valid.href, '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      alert('Invalid meeting URL.');
+    }
+  };
+
+  // Toggle task status
   const handleToggleTask = async (task: TaskItem) => {
     const nextStatus = task.status === 'done' ? 'todo' : 'done';
     task.status = nextStatus;
@@ -186,9 +177,9 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
     setTasks([...tasks]);
   };
 
-  // Contextual Chat handler
-  const handleSendChat = async (textToSend?: string) => {
-    const q = (textToSend || chatQuery).trim();
+  // In-Meeting Grounded Chat
+  const handleSendChat = async () => {
+    const q = chatQuery.trim();
     if (!q) return;
 
     const userMsg = {
@@ -201,17 +192,25 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
     setIsAnswering(true);
 
     try {
-      const response = await coordinator.process(`Regarding "${meeting.title}": ${q}`);
+      const response = await coordinator.process(
+        `Regarding meeting "${meeting.title}" on ${meeting.date}: ${q}`,
+        meeting.userId
+      );
       const agentMsg = {
         sender: 'agent' as const,
         text: response.message,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sources: response.evidence?.retrievedSources.map((s) => s.title),
       };
       setChatMessages((prev) => [...prev, agentMsg]);
     } catch (err) {
       setChatMessages((prev) => [
         ...prev,
-        { sender: 'agent', text: 'Unable to reason over meeting context.', time: 'Now' },
+        {
+          sender: 'agent',
+          text: 'I couldn\'t find enough information in your MeetingMind data to answer this.',
+          time: 'Now',
+        },
       ]);
     } finally {
       setIsAnswering(false);
@@ -233,44 +232,43 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
       case 'teams':
         return <span className="text-xs text-indigo-800 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-md font-medium">Microsoft Teams</span>;
       case 'in_person':
-        return <span className="text-xs text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-md font-medium">In-person Meeting</span>;
+        return <span className="text-xs text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-md font-medium">In-person</span>;
       case 'discord':
         return <span className="text-xs text-purple-800 bg-purple-50 border border-purple-200 px-2.5 py-0.5 rounded-md font-medium">Discord</span>;
       case 'phone':
-        return <span className="text-xs text-rose-800 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-md font-medium">Phone / Voice Call</span>;
+        return <span className="text-xs text-rose-800 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-md font-medium">Phone</span>;
       default:
-        return <span className="text-xs text-zinc-700 bg-zinc-100 border border-zinc-200 px-2.5 py-0.5 rounded-md font-medium">External Meeting</span>;
+        return <span className="text-xs text-zinc-700 bg-zinc-100 border border-zinc-200 px-2.5 py-0.5 rounded-md font-medium">External</span>;
     }
   };
 
   const isCompleted = meeting.meetingState === 'completed' || meeting.status === 'completed';
+  const meetingUrl = meeting.meetingUrl || meeting.meetingLink;
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 font-sans animate-in fade-in duration-150">
-      {/* Top Header & Back */}
+      {/* Top Header & Navigation */}
       <div className="mb-6 pb-4 border-b border-zinc-200">
         <button
           onClick={onBack}
           className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-900 transition-colors mb-4"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Schedule</span>
+          <span>Back to Calendar</span>
         </button>
 
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               {platformBadge()}
-              {meeting.meetingLink && (
-                <a
-                  href={meeting.meetingLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-zinc-600 hover:text-zinc-900 underline font-mono"
+              {meetingUrl && (
+                <button
+                  onClick={handleOpenMeetingLink}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-zinc-800 bg-zinc-100 hover:bg-zinc-200 border border-zinc-300 rounded-md transition-colors"
                 >
-                  <ExternalLink className="w-3 h-3" />
-                  <span>Join Link</span>
-                </a>
+                  <ExternalLink className="w-3 h-3 text-zinc-600" />
+                  <span>Open Meeting</span>
+                </button>
               )}
             </div>
 
@@ -281,14 +279,14 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
             <div className="flex items-center gap-3 text-xs text-zinc-500 mt-2 font-mono flex-wrap">
               <span className="flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5 text-zinc-400" />
-                {meeting.date}
+                {formatDisplayDate(meeting.date)}
               </span>
               <span>•</span>
               <span className="flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5 text-zinc-400" />
-                {meeting.startTime || '10:00'} – {meeting.endTime || '10:45'} ({meeting.durationMinutes}m)
+                {meeting.startTime || '10:00'} ({meeting.durationMinutes} min)
               </span>
-              {meeting.participants.length > 0 && (
+              {meeting.participants && meeting.participants.length > 0 && (
                 <>
                   <span>•</span>
                   <span className="flex items-center gap-1 font-sans">
@@ -302,97 +300,166 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
         </div>
       </div>
 
-      {/* Recording & Processing Control Panel */}
+      {/* Hidden file input for recording / transcript notes upload */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept=".mp3,.wav,.m4a,.mp4,.webm,.txt,.md,.csv"
+        className="hidden"
+      />
+
+      {/* Capture Alert Error Banner (e.g. Tab Audio Not Checked) */}
+      {recSnapshot.errorMessage && (
+        <div className="mb-6 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5 animate-in slide-in-from-top-1 duration-150">
+          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <div className="font-semibold">{recSnapshot.errorMessage}</div>
+            <div className="text-[11px] text-amber-700 mt-0.5">
+              To record audio from Google Meet, Zoom, or Teams in Chrome, choose the tab from the list and ensure the <strong>"Share tab audio"</strong> toggle is enabled.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recording & Capture Control Panel */}
       <div className="mb-8 bg-zinc-50/70 border border-zinc-200 rounded-xl p-5 shadow-2xs">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h3 className="text-xs font-semibold text-zinc-900 uppercase font-mono tracking-wider">
-              Meeting Session Capture
+              Meeting Audio Capture
             </h3>
             <p className="text-xs text-zinc-500 mt-0.5">
-              Record microphone, capture browser tab audio, or upload meeting recording (.mp3, .wav, .m4a, .mp4, .webm).
+              Capture meeting tab audio with explicit permission, use microphone for in-person, or upload notes.
             </p>
           </div>
 
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            accept=".mp3,.wav,.m4a,.mp4,.webm,.txt,.md"
-            className="hidden"
-          />
-
-          {/* If currently recording */}
-          {recordingState === 'recording' || recordingState === 'paused' ? (
+          {/* ACTIVE RECORDING STATE */}
+          {isThisMeetingRecording ? (
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-md">
                 <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
                 <span className="text-xs font-mono font-semibold text-red-700">
-                  {formatTimer(recDuration)}
+                  Recording {formatTimer(recSnapshot.durationSeconds)}
                 </span>
               </div>
 
               <button
-                onClick={handlePauseResume}
+                onClick={() =>
+                  recSnapshot.state === 'recording'
+                    ? recordingManager.pauseRecording()
+                    : recordingManager.resumeRecording()
+                }
                 className="px-3 py-1.5 text-xs font-medium bg-white hover:bg-zinc-100 border border-zinc-300 rounded-md text-zinc-800 transition-colors"
               >
-                {recordingState === 'paused' ? 'Resume' : 'Pause'}
+                {recSnapshot.state === 'paused' ? 'Resume' : 'Pause'}
               </button>
 
               <button
-                onClick={handleStopAndProcess}
+                onClick={handleStopRecording}
                 className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium bg-zinc-900 text-white hover:bg-zinc-800 rounded-md transition-all shadow-2xs"
               >
                 <Square className="w-3.5 h-3.5 fill-current" />
-                <span>Stop & Process</span>
+                <span>Stop Recording</span>
               </button>
             </div>
-          ) : isProcessing ? (
-            <div className="flex items-center gap-2 text-xs font-mono text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-md">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-spin" />
-              <span>{processingStep} ({processingProgress}%)</span>
+          ) : processingJob && processingJob.status !== 'completed' ? (
+            /* PROCESSING STATE WITH AUTHENTIC PROGRESS */
+            <div className="flex items-center gap-2 text-xs font-mono text-zinc-700 bg-zinc-100 border border-zinc-200 px-3 py-1.5 rounded-md">
+              <Loader2 className="w-3.5 h-3.5 text-zinc-900 animate-spin" />
+              <span>{processingJob.step}</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            /* READY / CAPTURE INITIATION */
+            <div className="flex items-center gap-2 flex-wrap">
               <button
-                onClick={() => handleStartRecording('microphone')}
+                onClick={handleEnableTabAudioCapture}
                 className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium bg-zinc-900 text-white hover:bg-zinc-800 rounded-md transition-all shadow-2xs"
+                title="Capture audio from Google Meet or Zoom tab"
               >
-                <Mic className="w-3.5 h-3.5" />
-                <span>Record Session</span>
+                <Video className="w-3.5 h-3.5" />
+                <span>Enable Meeting Capture</span>
               </button>
 
               <button
-                onClick={() => handleStartRecording('screen')}
+                onClick={handleStartMicrophoneCapture}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white hover:bg-zinc-50 border border-zinc-300 text-zinc-800 rounded-md transition-colors"
-                title="Capture Google Meet / Zoom tab audio"
+                title="Record with microphone for in-person sessions"
               >
-                <Video className="w-3.5 h-3.5 text-zinc-600" />
-                <span>Capture Tab Audio</span>
+                <Mic className="w-3.5 h-3.5 text-zinc-600" />
+                <span>Microphone</span>
               </button>
 
               <button
                 onClick={() => fileInputRef.current?.click()}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white hover:bg-zinc-50 border border-zinc-300 text-zinc-800 rounded-md transition-colors"
+                title="Upload audio recording or transcript notes"
               >
                 <Upload className="w-3.5 h-3.5 text-zinc-600" />
-                <span>Upload Recording</span>
+                <span>Upload Audio / Notes</span>
               </button>
             </div>
           )}
         </div>
+
+        {/* PROCESSING STAGES CHECKLIST (DISPLAYED DURING/AFTER PROCESSING) */}
+        {processingJob && (
+          <div className="mt-4 pt-4 border-t border-zinc-200/80 space-y-2 font-mono text-xs">
+            <div className="font-semibold text-zinc-800 text-[11px] mb-2 uppercase tracking-wider">
+              Processing Pipeline
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {processingJob.stages.map((stage) => (
+                <div
+                  key={stage.id}
+                  className={`flex items-center justify-between p-2 rounded border ${
+                    stage.status === 'completed'
+                      ? 'bg-emerald-50/50 border-emerald-200 text-emerald-800'
+                      : stage.status === 'active'
+                      ? 'bg-zinc-100 border-zinc-300 text-zinc-900 font-semibold'
+                      : stage.status === 'warning'
+                      ? 'bg-amber-50 border-amber-200 text-amber-800'
+                      : stage.status === 'skipped'
+                      ? 'bg-zinc-50/40 border-zinc-200 text-zinc-400'
+                      : stage.status === 'failed'
+                      ? 'bg-rose-50 border-rose-200 text-rose-800'
+                      : 'bg-zinc-50/30 border-zinc-100 text-zinc-400'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    {stage.status === 'completed' ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    ) : stage.status === 'active' ? (
+                      <Loader2 className="w-3.5 h-3.5 text-zinc-800 animate-spin shrink-0" />
+                    ) : stage.status === 'warning' ? (
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    ) : (
+                      <Circle className="w-3.5 h-3.5 text-zinc-300 shrink-0" />
+                    )}
+                    <span className="truncate">{stage.label}</span>
+                  </div>
+                  {stage.detail && (
+                    <span className="text-[10px] text-zinc-500 font-normal ml-2 truncate">
+                      {stage.detail}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Intelligence Body */}
       {isCompleted ? (
-        <div className="space-y-8">
-          {/* Summary Section */}
+        <div className="space-y-8 animate-in fade-in duration-150">
+          {/* Executive Summary */}
           <section className="bg-white border border-zinc-200 rounded-xl p-6 shadow-2xs">
             <h2 className="text-xs font-mono font-semibold uppercase text-zinc-400 tracking-wider mb-2">
               Executive Summary
             </h2>
             <p className="text-sm text-zinc-800 leading-relaxed font-sans">
-              {meeting.summary || 'Summary generated from meeting discussion.'}
+              {meeting.summary || 'Summary unavailable.'}
             </p>
           </section>
 
@@ -417,7 +484,7 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
               )}
             </section>
 
-            {/* Decisions */}
+            {/* Decisions Agreed */}
             <section className="bg-white border border-zinc-200 rounded-xl p-6 shadow-2xs">
               <h3 className="text-xs font-mono font-semibold uppercase text-zinc-400 tracking-wider mb-3">
                 Decisions Agreed
@@ -443,10 +510,10 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
             </section>
           </div>
 
-          {/* Commitments & Tasks */}
+          {/* Commitments & Action Items */}
           <section className="bg-white border border-zinc-200 rounded-xl p-6 shadow-2xs">
             <h3 className="text-xs font-mono font-semibold uppercase text-zinc-400 tracking-wider mb-4">
-              Commitments & Action Items
+              Commitments & Tasks
             </h3>
             {tasks.length > 0 ? (
               <div className="space-y-2">
@@ -463,10 +530,7 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          className="text-zinc-400 hover:text-zinc-900"
-                        >
+                        <button type="button" className="text-zinc-400 hover:text-zinc-900">
                           {isDone ? (
                             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                           ) : (
@@ -482,12 +546,11 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
                             {task.title}
                           </div>
                           <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
-                            Assigned to: <span className="font-semibold text-zinc-600">{task.assignee}</span>
+                            Assigned: <span className="font-semibold text-zinc-600">{task.assignee}</span>
                             {task.deadline && ` • Due: ${task.deadline}`}
                           </div>
                         </div>
                       </div>
-
                       <span className="text-[10px] font-mono text-zinc-400 uppercase">
                         {task.status}
                       </span>
@@ -538,7 +601,7 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
               )}
             </section>
 
-            {/* Referenced Resources */}
+            {/* Referenced RAG Resources */}
             <section className="bg-white border border-zinc-200 rounded-xl p-6 shadow-2xs">
               <h3 className="text-xs font-mono font-semibold uppercase text-zinc-400 tracking-wider mb-3">
                 Referenced RAG Resources
@@ -556,7 +619,7 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-zinc-400 italic">No specific external documents matched.</p>
+                <p className="text-xs text-zinc-400 italic">No external documents matched.</p>
               )}
             </section>
           </div>
@@ -569,10 +632,10 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
             >
               <div>
                 <h3 className="text-xs font-mono font-semibold uppercase text-zinc-400 tracking-wider">
-                  Full Meeting Transcript
+                  Meeting Transcript
                 </h3>
                 <p className="text-xs text-zinc-500 mt-0.5">
-                  {transcripts.length > 0 ? `${transcripts.length} segmented chunks` : 'Raw text notes available'}
+                  {transcripts.length > 0 ? `${transcripts.length} transcript chunks` : 'Transcript stream'}
                 </p>
               </div>
 
@@ -598,20 +661,20 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
                     {meeting.rawNotes}
                   </pre>
                 ) : (
-                  <p className="text-zinc-400 text-xs italic">No transcript available.</p>
+                  <p className="text-zinc-400 text-xs italic">No transcript recorded.</p>
                 )}
               </div>
             )}
           </section>
 
-          {/* Ask MeetingMind Contextual Chat */}
+          {/* Grounded In-Meeting Chat */}
           <section className="bg-white border border-zinc-200 rounded-xl p-6 shadow-2xs">
             <h3 className="text-xs font-mono font-semibold uppercase text-zinc-400 tracking-wider mb-2 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-zinc-900" />
-              Ask MeetingMind About This Meeting
+              Ask About This Meeting
             </h3>
             <p className="text-xs text-zinc-500 mb-4">
-              Query decisions, commitments, or specific speaker points from this meeting.
+              Answers are grounded strictly in this meeting's transcript, decisions, and matched resources using qwen3:8b.
             </p>
 
             {chatMessages.length > 0 && (
@@ -629,6 +692,11 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
                       }`}
                     >
                       {msg.text}
+                      {msg.sources && msg.sources.length > 0 && (
+                        <div className="mt-1.5 pt-1 border-t border-zinc-100 text-[10px] font-mono text-zinc-400">
+                          Source: {msg.sources.join(', ')}
+                        </div>
+                      )}
                     </div>
                     <span className="text-[10px] font-mono text-zinc-400 mt-0.5">{msg.time}</span>
                   </div>
@@ -661,31 +729,41 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
           </section>
         </div>
       ) : (
-        /* Not yet recorded / upcoming state */
+        /* Upcoming / Unrecorded State */
         <div className="border border-dashed border-zinc-300 rounded-xl p-16 text-center bg-white">
           <Calendar className="w-8 h-8 text-zinc-300 mx-auto mb-3" />
           <h3 className="text-base font-semibold text-zinc-800 mb-1">
-            Meeting hasn't happened yet
+            Meeting hasn't started
           </h3>
           <p className="text-xs text-zinc-500 max-w-md mx-auto mb-6">
-            When this meeting begins on {meeting.platform || 'your external platform'}, click <strong>Record Session</strong> or upload the audio recording afterward to generate meeting intelligence.
+            When this meeting begins on {meeting.platform || 'your meeting platform'}, click <strong>Enable Meeting Capture</strong> to share the meeting tab audio, or use the microphone for in-person discussion.
           </p>
 
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-3 flex-wrap">
+            {meetingUrl && (
+              <button
+                onClick={handleOpenMeetingLink}
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium bg-white hover:bg-zinc-50 border border-zinc-300 text-zinc-800 rounded-md transition-all shadow-2xs"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Open Meeting</span>
+              </button>
+            )}
+
             <button
-              onClick={() => handleStartRecording('microphone')}
+              onClick={handleEnableTabAudioCapture}
               className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium bg-zinc-900 text-white hover:bg-zinc-800 rounded-md transition-all shadow-2xs"
             >
-              <Mic className="w-3.5 h-3.5" />
-              <span>Record Session Now</span>
+              <Video className="w-3.5 h-3.5" />
+              <span>Enable Meeting Capture</span>
             </button>
 
             <button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={handleStartMicrophoneCapture}
               className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium bg-white hover:bg-zinc-50 border border-zinc-300 text-zinc-700 rounded-md transition-colors"
             >
-              <Upload className="w-3.5 h-3.5 text-zinc-500" />
-              <span>Upload Recording</span>
+              <Mic className="w-3.5 h-3.5 text-zinc-500" />
+              <span>Microphone</span>
             </button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../db';
 import { TaskItem } from '../types';
+import { formatLocalDate } from '../utils/dateUtils';
 import {
   CheckCircle2,
   Circle,
@@ -24,7 +25,7 @@ export const TasksView: React.FC<TasksViewProps> = ({ userId = '', onSelectMeeti
   const [isCreating, setIsCreating] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newAssignee, setNewAssignee] = useState('');
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = formatLocalDate(new Date());
   const [newDeadline, setNewDeadline] = useState(todayStr);
 
   const loadTasks = async () => {
@@ -103,7 +104,7 @@ export const TasksView: React.FC<TasksViewProps> = ({ userId = '', onSelectMeeti
                 type="text"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="e.g. Audit rate limit headers"
+                placeholder="Task title..."
                 className="w-full text-xs px-3 py-1.5 rounded-md border border-zinc-200"
               />
             </div>
@@ -113,7 +114,7 @@ export const TasksView: React.FC<TasksViewProps> = ({ userId = '', onSelectMeeti
                 type="text"
                 value={newAssignee}
                 onChange={(e) => setNewAssignee(e.target.value)}
-                placeholder="Rahul"
+                placeholder="Assignee name..."
                 className="w-full text-xs px-3 py-1.5 rounded-md border border-zinc-200"
               />
             </div>
@@ -171,10 +172,11 @@ export const TasksView: React.FC<TasksViewProps> = ({ userId = '', onSelectMeeti
             className="text-xs px-2.5 py-1 rounded-md border border-zinc-200 bg-white"
           >
             <option value="all">All People</option>
-            <option value="Rahul">Rahul</option>
-            <option value="Priya">Priya</option>
-            <option value="Alex">Alex</option>
-            <option value="Yaswanth">Yaswanth</option>
+            {Array.from(new Set(tasks.map((t) => t.assignee).filter(Boolean))).map((person) => (
+              <option key={person} value={person}>
+                {person}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -183,12 +185,12 @@ export const TasksView: React.FC<TasksViewProps> = ({ userId = '', onSelectMeeti
       <div className="space-y-2">
         {filteredTasks.length === 0 ? (
           <div className="border border-dashed border-zinc-200 rounded-lg p-8 text-center text-xs text-zinc-400 font-mono">
-            No tasks found.
+            No tasks yet.
           </div>
         ) : (
           filteredTasks.map((task) => {
             const isDone = task.status === 'done';
-            const isOverdue = task.deadline && new Date(task.deadline) < new Date('2026-09-26') && !isDone;
+            const isOverdue = !!(task.deadline && task.deadline < todayStr && !isDone);
 
             return (
               <div

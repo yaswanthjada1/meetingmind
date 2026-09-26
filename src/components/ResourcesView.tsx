@@ -151,7 +151,7 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({
           <div className="border border-dashed border-zinc-300 rounded-xl p-14 text-center bg-white">
             <FileText className="w-8 h-8 text-zinc-300 mx-auto mb-3" />
             <h3 className="text-sm font-semibold text-zinc-700 mb-1">
-              {searchQuery || selectedCategory !== 'All' ? 'No matching resources found' : 'No resources yet'}
+              {searchQuery || selectedCategory !== 'All' ? 'No matching resources found' : 'Your personal AI knowledge base is empty.'}
             </h3>
             <p className="text-xs text-zinc-400 max-w-md mx-auto mb-5">
               Upload PDF, DOCX, TXT, or Markdown documents to equip your personal AI assistant with persistent background knowledge.
@@ -210,6 +210,11 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({
                     <span className="inline-flex items-center gap-1 text-[11px] font-mono font-medium text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded">
                       <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                       Indexed
+                    </span>
+                  ) : doc.status === 'embedding_incomplete' ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                      <AlertCircle className="w-3 h-3 text-amber-600" />
+                      ⚠ Embedding incomplete
                     </span>
                   ) : doc.status === 'processing' || doc.status === 'extracting' ? (
                     <span className="inline-flex items-center gap-1 text-[11px] font-mono text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">

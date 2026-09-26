@@ -2,17 +2,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import { User, LogOut, Settings as SettingsIcon, Play, HelpCircle, ChevronDown, Database, Trash2, Loader2 } from 'lucide-react';
 import { AuthUser } from '../services/firebase';
 import { processingQueue, ProcessingJob } from '../services/processingPipeline';
+import { checkOllamaHealth, OllamaHealthStatus } from '../services/llm';
 
 interface HeaderProps {
   activeTab: 'calendar' | 'meetings' | 'resources' | 'tasks' | 'delegate';
   setActiveTab: (tab: 'calendar' | 'meetings' | 'resources' | 'tasks' | 'delegate') => void;
   currentUser: AuthUser | null;
   onOpenSettings: () => void;
-  onStartDemoTour: () => void;
+  onOpenDiagnostics?: () => void;
   onSignOut: () => void;
   onOpenLogin: () => void;
-  onLoadDemoData?: () => void;
-  onClearDemoData?: () => void;
   onSelectMeeting?: (meetingId: string) => void;
 }
 
@@ -21,22 +20,31 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   currentUser,
   onOpenSettings,
-  onStartDemoTour,
+  onOpenDiagnostics,
   onSignOut,
   onOpenLogin,
-  onLoadDemoData,
-  onClearDemoData,
   onSelectMeeting,
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isQueueMenuOpen, setIsQueueMenuOpen] = useState(false);
   const [activeJobs, setActiveJobs] = useState<ProcessingJob[]>([]);
+  const [ollamaStatus, setOllamaStatus] = useState<OllamaHealthStatus | null>(null);
+  const [isAiStatusOpen, setIsAiStatusOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const queueRef = useRef<HTMLDivElement>(null);
+  const aiRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // 1. Initial & interval check of local Ollama models
+    const checkModels = async () => {
+      const status = await checkOllamaHealth();
+      setOllamaStatus(status);
+    };
+    checkModels();
+    const interval = setInterval(checkModels, 15000);
+
     const unsub = processingQueue.subscribe((jobs) => {
-      setActiveJobs(jobs.filter((j) => j.status !== 'completed' && j.status !== 'error'));
+      setActiveJobs(jobs.filter((j) => j.status !== 'completed' && j.status !== 'error' && j.status !== 'transcription_unavailable'));
     });
 
     const handleClickOutside = (e: MouseEvent) => {
@@ -46,9 +54,13 @@ export const Header: React.FC<HeaderProps> = ({
       if (queueRef.current && !queueRef.current.contains(e.target as Node)) {
         setIsQueueMenuOpen(false);
       }
+      if (aiRef.current && !aiRef.current.contains(e.target as Node)) {
+        setIsAiStatusOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
+      clearInterval(interval);
       unsub();
       document.removeEventListener('mousedown', handleClickOutside);
     };
@@ -97,8 +109,93 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
       </div>
 
-      {/* Right Side: Processing Status + Account Menu */}
-      <div className="flex items-center gap-3">
+      {/* Right Side: Local AI Status + Processing Status + Account Menu */}
+      <div className="flex items-center gap-2.5">
+        {/* Local AI Model Availability Indicator */}
+        <div className="relative" ref={aiRef}>
+          <button
+            onClick={() => setIsAiStatusOpen(!isAiStatusOpen)}
+            className={`flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-md border transition-colors shadow-2xs ${
+              ollamaStatus?.isFullyReady
+                ? 'text-emerald-800 bg-emerald-50/80 border-emerald-200 hover:bg-emerald-100'
+                : !ollamaStatus?.ok
+                ? 'text-zinc-600 bg-zinc-100 border-zinc-200 hover:bg-zinc-200'
+                : 'text-amber-800 bg-amber-50 border-amber-200 hover:bg-amber-100'
+            }`}
+            title="Local AI Status"
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                ollamaStatus?.isFullyReady
+                  ? 'bg-emerald-600'
+                  : !ollamaStatus?.ok
+                  ? 'bg-zinc-400'
+                  : 'bg-amber-500'
+              }`}
+            />
+            <span className="hidden md:inline font-medium">
+              {ollamaStatus?.isFullyReady
+                ? 'Local AI Ready'
+                : !ollamaStatus?.ok
+                ? 'Local AI Offline'
+                : `Missing ${ollamaStatus?.missingRequired[0] || 'Model'}`}
+            </span>
+          </button>
+
+          {isAiStatusOpen && (
+            <div className="absolute right-0 mt-1.5 w-72 bg-white border border-zinc-200 rounded-lg shadow-xl p-3.5 text-xs z-50 animate-in fade-in-50 duration-100 font-sans">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-zinc-100">
+                <span className="font-semibold text-zinc-900">Local AI Engine</span>
+                <span
+                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                    ollamaStatus?.isFullyReady
+                      ? 'bg-emerald-50 text-emerald-700 font-semibold'
+                      : 'bg-zinc-100 text-zinc-500'
+                  }`}
+                >
+                  {ollamaStatus?.isFullyReady ? 'Ready' : 'Offline'}
+                </span>
+              </div>
+
+              <div className="space-y-1.5 text-zinc-600 text-[11px]">
+                <div className="flex items-center justify-between">
+                  <span>Reasoning:</span>
+                  <span className="font-mono text-zinc-900 font-medium">
+                    {ollamaStatus?.hasPrimaryReasoning ? 'qwen3:8b ✓' : 'Missing ✗'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Fast Operations:</span>
+                  <span className="font-mono text-zinc-900 font-medium">
+                    {ollamaStatus?.hasFastModel ? 'qwen3:1.7b ✓' : 'Missing ✗'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>RAG Embeddings:</span>
+                  <span className="font-mono text-zinc-900 font-medium">
+                    {ollamaStatus?.hasEmbeddingModel ? 'qwen3-embedding:0.6b ✓' : 'Missing ✗'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-3 pt-2 border-t border-zinc-100 flex items-center justify-between">
+                <span className="text-[10px] text-zinc-400 font-mono">Target: /ollama</span>
+                {onOpenDiagnostics && (
+                  <button
+                    onClick={() => {
+                      setIsAiStatusOpen(false);
+                      onOpenDiagnostics();
+                    }}
+                    className="text-[10px] font-mono font-medium text-zinc-900 hover:underline"
+                  >
+                    Run System Diagnostics →
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Background Processing Indicator Pill */}
         {activeJobs.length > 0 && (
           <div className="relative" ref={queueRef}>
@@ -194,51 +291,6 @@ export const Header: React.FC<HeaderProps> = ({
                   <SettingsIcon className="w-3.5 h-3.5 text-zinc-500" />
                   <span>Settings & Privacy</span>
                 </button>
-
-                <button
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    onStartDemoTour();
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2 text-zinc-700"
-                >
-                  <Play className="w-3.5 h-3.5 text-zinc-500" />
-                  <span>Interactive Demo Tour</span>
-                </button>
-
-                <div className="border-t border-zinc-100 my-1" />
-
-                <div className="px-3 py-1.5 text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
-                  Developer / Demo
-                </div>
-
-                {onLoadDemoData && (
-                  <button
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      onLoadDemoData();
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2 text-zinc-700"
-                  >
-                    <Database className="w-3.5 h-3.5 text-zinc-500" />
-                    <span>Load Demo Data</span>
-                  </button>
-                )}
-
-                {onClearDemoData && (
-                  <button
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      if (confirm('Clear all your local data? This cannot be undone.')) {
-                        onClearDemoData();
-                      }
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2 text-rose-600"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Clear All Data</span>
-                  </button>
-                )}
 
                 <div className="border-t border-zinc-100 my-1" />
 

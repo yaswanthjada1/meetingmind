@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Meeting, MeetingPlatform } from '../types';
+import { formatLocalDate, formatDisplayDate } from '../utils/dateUtils';
 import { Search, Plus, Calendar, Clock, Users, ChevronRight, CheckCircle2 } from 'lucide-react';
 
 interface MeetingsHistoryViewProps {
@@ -27,16 +28,15 @@ export const MeetingsHistoryView: React.FC<MeetingsHistoryViewProps> = ({
 
   // Group by relative date label using real browser dates
   const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = formatLocalDate(today);
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const yesterdayStr = formatLocalDate(yesterday);
 
   const formatHeaderDate = (dateStr: string) => {
     if (dateStr === todayStr) return 'Today';
     if (dateStr === yesterdayStr) return 'Yesterday';
-    const d = new Date(`${dateStr}T00:00:00`);
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    return formatDisplayDate(dateStr);
   };
 
   // Grouping

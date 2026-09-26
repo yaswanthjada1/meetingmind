@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Meeting, MeetingPlatform, RecordingMode, CalendarEvent } from '../types';
 import { db } from '../db';
+import { formatLocalDate } from '../utils/dateUtils';
 import {
   X,
   Calendar,
@@ -10,9 +11,6 @@ import {
   Link,
   Mic,
   Plus,
-  Radio,
-  FileAudio,
-  CheckCircle2,
 } from 'lucide-react';
 
 interface AddExistingMeetingModalProps {
@@ -23,14 +21,14 @@ interface AddExistingMeetingModalProps {
   initialDate?: string;
 }
 
-const PLATFORMS: Array<{ id: MeetingPlatform; label: string; iconName: string }> = [
-  { id: 'google_meet', label: 'Google Meet', iconName: 'Video' },
-  { id: 'zoom', label: 'Zoom', iconName: 'Video' },
-  { id: 'teams', label: 'Microsoft Teams', iconName: 'Video' },
-  { id: 'in_person', label: 'In-person Meeting', iconName: 'Users' },
-  { id: 'discord', label: 'Discord', iconName: 'Radio' },
-  { id: 'phone', label: 'Phone / Voice Call', iconName: 'Mic' },
-  { id: 'other', label: 'Other', iconName: 'Calendar' },
+const PLATFORMS: Array<{ id: MeetingPlatform; label: string }> = [
+  { id: 'google_meet', label: 'Google Meet' },
+  { id: 'zoom', label: 'Zoom' },
+  { id: 'teams', label: 'Microsoft Teams' },
+  { id: 'in_person', label: 'In-person' },
+  { id: 'discord', label: 'Discord' },
+  { id: 'phone', label: 'Phone' },
+  { id: 'other', label: 'Other' },
 ];
 
 export const AddExistingMeetingModal: React.FC<AddExistingMeetingModalProps> = ({
@@ -40,23 +38,50 @@ export const AddExistingMeetingModal: React.FC<AddExistingMeetingModalProps> = (
   userId = 'default_user',
   initialDate,
 }) => {
-  const todayStr = initialDate || new Date().toISOString().split('T')[0];
+  const defaultDate = initialDate || formatLocalDate(new Date());
 
   const [title, setTitle] = useState('');
-  const [date, setDate] = useState(todayStr);
+  const [date, setDate] = useState(defaultDate);
   const [startTime, setStartTime] = useState('10:00');
-  const [durationMinutes, setDurationMinutes] = useState(45);
+  const [durationMinutes, setDurationMinutes] = useState(60);
   const [platform, setPlatform] = useState<MeetingPlatform>('google_meet');
   const [meetingLink, setMeetingLink] = useState('');
   const [participantInput, setParticipantInput] = useState('');
   const [recordingMode, setRecordingMode] = useState<RecordingMode>('manual');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialDate) {
+      setDate(initialDate);
+    }
+  }, [initialDate]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    setValidationError(null);
+
+    const cleanTitle = title.trim();
+    if (!cleanTitle) {
+      setValidationError('Please enter a meeting title.');
+      return;
+    }
+
+    const cleanLink = meetingLink.trim();
+    if (cleanLink) {
+      try {
+        const parsed = new URL(cleanLink);
+        if (!['http:', 'https:'].includes(parsed.protocol)) {
+          setValidationError('Meeting link must begin with http:// or https://');
+          return;
+        }
+      } catch (e) {
+        setValidationError('Please provide a valid URL for the meeting link.');
+        return;
+      }
+    }
 
     setIsSubmitting(true);
     try {
@@ -66,22 +91,29 @@ export const AddExistingMeetingModal: React.FC<AddExistingMeetingModalProps> = (
         .map((p) => p.trim())
         .filter(Boolean);
 
-      // Compute start and end times ISO
-      const startDateTime = new Date(`${date}T${startTime}:00`);
-      const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60000);
-      const endTimeStr = `${String(endDateTime.getHours()).padStart(2, '0')}:${String(endDateTime.getMinutes()).padStart(2, '0')}`;
+      // Compute end time based on local date components
+      const [hoursStr, minsStr] = startTime.split(':');
+      const startHours = parseInt(hoursStr, 10);
+      const startMins = parseInt(minsStr, 10);
+      const totalStartMins = startHours * 60 + startMins;
+      const totalEndMins = totalStartMins + durationMinutes;
+
+      const endHours = Math.floor(totalEndMins / 60) % 24;
+      const endMinsRemainder = totalEndMins % 60;
+      const endTimeStr = `${String(endHours).padStart(2, '0')}:${String(endMinsRemainder).padStart(2, '0')}`;
 
       const newMeeting: Meeting = {
         id: meetingId,
         userId,
-        title: title.trim(),
+        title: cleanTitle,
         date,
         startTime,
         endTime: endTimeStr,
         durationMinutes,
         platform,
-        meetingLink: meetingLink.trim() || undefined,
-        participants: participants.length > 0 ? participants : ['Organizer'],
+        meetingLink: cleanLink || undefined,
+        meetingUrl: cleanLink || undefined,
+        participants,
         summary: '',
         importantPoints: [],
         decisions: [],
@@ -90,7 +122,7 @@ export const AddExistingMeetingModal: React.FC<AddExistingMeetingModalProps> = (
         deadlines: [],
         conflicts: [],
         status: 'scheduled',
-        meetingState: 'upcoming',
+        meetingState: 'scheduled',
         recordingMode,
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -98,27 +130,27 @@ export const AddExistingMeetingModal: React.FC<AddExistingMeetingModalProps> = (
 
       await db.meetings.put(newMeeting);
 
-      // Add to calendar events
+      // Create matching calendar event record scoped to userId
       const calEvent: CalendarEvent = {
         id: `cal-${meetingId}`,
         userId,
         title: newMeeting.title,
         participants: newMeeting.participants,
-        start: startDateTime.toISOString(),
-        end: endDateTime.toISOString(),
+        start: `${date}T${startTime}:00`,
+        end: `${date}T${endTimeStr}:00`,
         sourceMeetingId: meetingId,
         platform: newMeeting.platform,
         meetingLink: newMeeting.meetingLink,
         status: 'confirmed',
-        meetingState: 'upcoming',
+        meetingState: 'scheduled',
       };
 
       await db.calendarEvents.put(calEvent);
 
       onAdded(meetingId);
       onClose();
-    } catch (err) {
-      console.error('Failed to add external meeting:', err);
+    } catch (err: any) {
+      setValidationError(`Failed to save meeting: ${err?.message || 'IndexedDB error'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -130,9 +162,9 @@ export const AddExistingMeetingModal: React.FC<AddExistingMeetingModalProps> = (
         {/* Header */}
         <div className="p-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
           <div>
-            <h2 className="text-sm font-semibold text-zinc-900">Add Existing Meeting</h2>
+            <h2 className="text-sm font-semibold text-zinc-900">+ Add Existing Meeting</h2>
             <p className="text-[11px] text-zinc-500 mt-0.5">
-              Tell MeetingMind about a meeting happening on Google Meet, Zoom, Teams or in-person.
+              Track an existing meeting happening on Google Meet, Zoom, Teams, Discord, Phone, or In-Person.
             </p>
           </div>
           <button
@@ -145,23 +177,29 @@ export const AddExistingMeetingModal: React.FC<AddExistingMeetingModalProps> = (
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {validationError && (
+            <div className="p-2.5 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-xs font-mono">
+              {validationError}
+            </div>
+          )}
+
           {/* Title */}
           <div>
-            <label className="block text-xs font-medium text-zinc-700 mb-1">Meeting Title *</label>
+            <label className="block text-xs font-medium text-zinc-700 mb-1">Title *</label>
             <input
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Sprint Architecture Sync or Client Review"
+              placeholder="e.g. Weekly Product Sync"
               className="w-full text-xs px-3 py-2 rounded-md border border-zinc-200 focus:outline-hidden focus:border-zinc-500 bg-white"
             />
           </div>
 
-          {/* Date, Time & Duration */}
+          {/* Date, Start Time & Duration */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-medium text-zinc-700 mb-1">Date</label>
+              <label className="block text-xs font-medium text-zinc-700 mb-1">Date *</label>
               <input
                 type="date"
                 required
@@ -171,7 +209,7 @@ export const AddExistingMeetingModal: React.FC<AddExistingMeetingModalProps> = (
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-zinc-700 mb-1">Start Time</label>
+              <label className="block text-xs font-medium text-zinc-700 mb-1">Start Time *</label>
               <input
                 type="time"
                 required
@@ -181,7 +219,7 @@ export const AddExistingMeetingModal: React.FC<AddExistingMeetingModalProps> = (
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-zinc-700 mb-1">Duration</label>
+              <label className="block text-xs font-medium text-zinc-700 mb-1">Duration *</label>
               <select
                 value={durationMinutes}
                 onChange={(e) => setDurationMinutes(Number(e.target.value))}
@@ -190,7 +228,7 @@ export const AddExistingMeetingModal: React.FC<AddExistingMeetingModalProps> = (
                 <option value={15}>15 mins</option>
                 <option value={30}>30 mins</option>
                 <option value={45}>45 mins</option>
-                <option value={60}>60 mins (1 hr)</option>
+                <option value={60}>60 minutes</option>
                 <option value={90}>90 mins</option>
                 <option value={120}>2 hours</option>
               </select>
@@ -199,29 +237,33 @@ export const AddExistingMeetingModal: React.FC<AddExistingMeetingModalProps> = (
 
           {/* Platform */}
           <div>
-            <label className="block text-xs font-medium text-zinc-700 mb-1.5">Platform / Location</label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <label className="block text-xs font-medium text-zinc-700 mb-1.5">Platform</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {PLATFORMS.map((p) => (
                 <button
                   type="button"
                   key={p.id}
                   onClick={() => setPlatform(p.id)}
-                  className={`text-left px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors flex items-center gap-1.5 ${
+                  className={`text-center px-2 py-1.5 rounded-md text-xs font-medium border transition-colors truncate ${
                     platform === p.id
                       ? 'border-zinc-900 bg-zinc-900 text-white shadow-2xs'
                       : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50'
                   }`}
                 >
-                  <span className="truncate">{p.label}</span>
+                  {p.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Meeting Link (Optional) */}
+          {/* Meeting Link (Optional for In-person / Phone) */}
           <div>
             <label className="block text-xs font-medium text-zinc-700 mb-1">
-              Meeting Link <span className="text-zinc-400 font-normal">(Optional)</span>
+              Meeting Link {platform === 'in_person' || platform === 'phone' ? (
+                <span className="text-zinc-400 font-normal">(Optional)</span>
+              ) : (
+                <span className="text-zinc-500 font-normal">(e.g. Google Meet or Zoom URL)</span>
+              )}
             </label>
             <div className="relative">
               <Link className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5" />
@@ -229,7 +271,7 @@ export const AddExistingMeetingModal: React.FC<AddExistingMeetingModalProps> = (
                 type="url"
                 value={meetingLink}
                 onChange={(e) => setMeetingLink(e.target.value)}
-                placeholder="https://meet.google.com/xyz-abc or Zoom link"
+                placeholder="https://meet.google.com/abc-defg-hij"
                 className="w-full text-xs pl-8 pr-3 py-1.5 rounded-md border border-zinc-200 font-mono"
               />
             </div>
@@ -244,19 +286,19 @@ export const AddExistingMeetingModal: React.FC<AddExistingMeetingModalProps> = (
               type="text"
               value={participantInput}
               onChange={(e) => setParticipantInput(e.target.value)}
-              placeholder="e.g. Rahul, Priya, Alex"
+              placeholder="e.g. Mentor, Team Lead"
               className="w-full text-xs px-3 py-1.5 rounded-md border border-zinc-200"
             />
           </div>
 
           {/* Recording Mode */}
           <div>
-            <label className="block text-xs font-medium text-zinc-700 mb-1.5">Recording Preference</label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <label className="block text-xs font-medium text-zinc-700 mb-1.5">Recording Mode</label>
+            <div className="grid grid-cols-2 gap-2 text-xs">
               <label
-                className={`flex items-start gap-2 p-2 rounded-md border cursor-pointer text-xs transition-colors ${
+                className={`flex items-start gap-2 p-2 rounded-md border cursor-pointer transition-colors ${
                   recordingMode === 'manual'
-                    ? 'border-zinc-900 bg-zinc-50/80 text-zinc-900 font-medium'
+                    ? 'border-zinc-900 bg-zinc-50 text-zinc-900 font-medium'
                     : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
                 }`}
               >
@@ -268,15 +310,15 @@ export const AddExistingMeetingModal: React.FC<AddExistingMeetingModalProps> = (
                   className="mt-0.5"
                 />
                 <div>
-                  <div>Manual</div>
-                  <div className="text-[10px] text-zinc-400 font-normal leading-tight">Start with 1 click</div>
+                  <div>Manual Capture</div>
+                  <div className="text-[10px] text-zinc-400 font-normal leading-tight">Start with 1 click when meeting begins</div>
                 </div>
               </label>
 
               <label
-                className={`flex items-start gap-2 p-2 rounded-md border cursor-pointer text-xs transition-colors ${
+                className={`flex items-start gap-2 p-2 rounded-md border cursor-pointer transition-colors ${
                   recordingMode === 'automatic'
-                    ? 'border-zinc-900 bg-zinc-50/80 text-zinc-900 font-medium'
+                    ? 'border-zinc-900 bg-zinc-50 text-zinc-900 font-medium'
                     : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
                 }`}
               >
@@ -288,28 +330,8 @@ export const AddExistingMeetingModal: React.FC<AddExistingMeetingModalProps> = (
                   className="mt-0.5"
                 />
                 <div>
-                  <div>Automatic</div>
-                  <div className="text-[10px] text-zinc-400 font-normal leading-tight">Prompts at start time</div>
-                </div>
-              </label>
-
-              <label
-                className={`flex items-start gap-2 p-2 rounded-md border cursor-pointer text-xs transition-colors ${
-                  recordingMode === 'upload_later'
-                    ? 'border-zinc-900 bg-zinc-50/80 text-zinc-900 font-medium'
-                    : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="recMode"
-                  checked={recordingMode === 'upload_later'}
-                  onChange={() => setRecordingMode('upload_later')}
-                  className="mt-0.5"
-                />
-                <div>
-                  <div>Upload Later</div>
-                  <div className="text-[10px] text-zinc-400 font-normal leading-tight">Upload audio file</div>
+                  <div>Prepare Automatically</div>
+                  <div className="text-[10px] text-zinc-400 font-normal leading-tight">Prompt to enable capture before start</div>
                 </div>
               </label>
             </div>
@@ -317,7 +339,7 @@ export const AddExistingMeetingModal: React.FC<AddExistingMeetingModalProps> = (
 
           {/* Footer Actions */}
           <div className="pt-3 border-t border-zinc-100 flex items-center justify-between">
-            <span className="text-[11px] text-zinc-400">Indexed strictly in local memory</span>
+            <span className="text-[10px] font-mono text-zinc-400">Stored locally in IndexedDB</span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -331,7 +353,7 @@ export const AddExistingMeetingModal: React.FC<AddExistingMeetingModalProps> = (
                 disabled={isSubmitting || !title.trim()}
                 className="px-4 py-1.5 text-xs font-medium bg-zinc-900 text-white hover:bg-zinc-800 rounded-md transition-all shadow-2xs disabled:opacity-50"
               >
-                {isSubmitting ? 'Adding...' : 'Add to Calendar'}
+                {isSubmitting ? 'Saving...' : 'Add to Calendar'}
               </button>
             </div>
           </div>

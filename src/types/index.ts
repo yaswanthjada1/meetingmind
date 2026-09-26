@@ -12,15 +12,31 @@ export type MeetingPlatform =
   | 'phone'
   | 'other';
 
-export type MeetingLifecycleState =
-  | 'upcoming'
+export type RecordingState =
   | 'scheduled'
-  | 'starting'
-  | 'live'
+  | 'ready'
+  | 'requesting_permission'
   | 'recording'
   | 'paused'
-  | 'ending'
+  | 'stopped'
   | 'processing'
+  | 'processed'
+  | 'failed';
+
+export type MeetingLifecycleState =
+  | 'scheduled'
+  | 'ready'
+  | 'requesting_permission'
+  | 'recording'
+  | 'paused'
+  | 'stopped'
+  | 'processing'
+  | 'processed'
+  | 'failed'
+  | 'upcoming'
+  | 'starting'
+  | 'live'
+  | 'ending'
   | 'completed'
   | 'no_recording'
   | 'cancelled';
@@ -120,6 +136,8 @@ export interface Meeting {
   durationMinutes: number;
   platform?: MeetingPlatform;
   meetingLink?: string;
+  meetingUrl?: string; // alias for meetingLink
+  recordingId?: string;
   participants: string[];
   summary: string;
   importantPoints: ImportantPoint[];
@@ -141,6 +159,17 @@ export interface Meeting {
   location?: string;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface MeetingRecording {
+  recordingId: string;
+  meetingId: string;
+  userId: string;
+  mimeType: string;
+  size: number;
+  duration: number; // in seconds
+  createdAt: number;
+  blob: Blob;
 }
 
 export interface Person {
@@ -190,7 +219,7 @@ export interface ResourceDocument {
   description?: string;
   category?: ResourceCategory | string;
   tags?: string[];
-  status: 'indexed' | 'processing' | 'extracting' | 'failed' | 'error';
+  status: 'indexed' | 'processing' | 'extracting' | 'embedding_incomplete' | 'failed' | 'error';
   error?: string;
   contentSnippet: string;
   rawText?: string;
@@ -211,6 +240,7 @@ export interface ResourceChunk {
   heading?: string;
   section?: string;
   tokenCount?: number;
+  embedding?: number[];
   createdAt: number;
 }
 

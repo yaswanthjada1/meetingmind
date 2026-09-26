@@ -1,142 +1,89 @@
-import React, { useState } from 'react';
-import { Meeting, CalendarEvent, MeetingPlatform, MeetingLifecycleState } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Meeting, MeetingPlatform } from '../types';
+import {
+  formatLocalDate,
+  generateMonthGrid,
+  goToPreviousMonth,
+  goToNextMonth,
+  goToToday,
+  formatDisplayDate,
+  CalendarCell,
+} from '../utils/dateUtils';
 import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  Video,
-  Users,
-  Mic,
   Calendar as CalendarIcon,
   CheckCircle2,
   Clock,
-  Radio,
-  Sparkles,
-  AlertCircle,
+  Video,
+  Users,
 } from 'lucide-react';
 
 interface CalendarDashboardProps {
   meetings: Meeting[];
-  calendarEvents: CalendarEvent[];
+  calendarEvents?: any[];
   onSelectMeeting: (meetingId: string) => void;
   onAddExistingMeeting: (dateStr?: string) => void;
 }
 
 export const CalendarDashboard: React.FC<CalendarDashboardProps> = ({
   meetings,
-  calendarEvents,
   onSelectMeeting,
   onAddExistingMeeting,
 }) => {
-  // Current view anchor date (defaults to current real date)
-  const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [selectedDayDate, setSelectedDayDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
-  );
+  // Current view anchor date (defaults strictly to runtime system date)
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
+  const [todayStr, setTodayStr] = useState<string>(() => formatLocalDate(new Date()));
+  const [selectedDayDate, setSelectedDayDate] = useState<string>(() => formatLocalDate(new Date()));
 
-  const today = new Date();
-  const todayDateStr = today.toISOString().split('T')[0];
+  // Refresh today dynamically if app remains open across midnight
+  useEffect(() => {
+    const updateMidnight = () => {
+      const now = new Date();
+      const freshTodayStr = formatLocalDate(now);
+      if (freshTodayStr !== todayStr) {
+        setTodayStr(freshTodayStr);
+      }
+    };
+    const interval = setInterval(updateMidnight, 60000);
+    return () => clearInterval(interval);
+  }, [todayStr]);
 
-  // Calendar Math: Month Grid Calculation (Sun - Sat)
   const year = currentDate.getFullYear();
-  const month = currentDate.getMonth(); // 0-indexed
+  const month = currentDate.getMonth();
 
-  // First day of current month
-  const firstDayOfMonth = new Date(year, month, 1);
-  const startingDayOfWeek = firstDayOfMonth.getDay(); // 0 (Sun) to 6 (Sat)
-
-  // Total days in current month
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  // Days in previous month
-  const daysInPrevMonth = new Date(year, month, 0).getDate();
-
-  // Build grid days (usually 35 or 42 cells)
-  interface CalendarCell {
-    date: Date;
-    dateStr: string;
-    dayNumber: number;
-    isCurrentMonth: boolean;
-    isToday: boolean;
-  }
-
-  const cells: CalendarCell[] = [];
-
-  // 1. Previous month leading days
-  for (let i = startingDayOfWeek - 1; i >= 0; i--) {
-    const d = new Date(year, month - 1, daysInPrevMonth - i);
-    const dateStr = d.toISOString().split('T')[0];
-    cells.push({
-      date: d,
-      dateStr,
-      dayNumber: daysInPrevMonth - i,
-      isCurrentMonth: false,
-      isToday: dateStr === todayDateStr,
-    });
-  }
-
-  // 2. Current month days
-  for (let day = 1; day <= daysInMonth; day++) {
-    const d = new Date(year, month, day);
-    const dateStr = d.toISOString().split('T')[0];
-    cells.push({
-      date: d,
-      dateStr,
-      dayNumber: day,
-      isCurrentMonth: true,
-      isToday: dateStr === todayDateStr,
-    });
-  }
-
-  // 3. Next month trailing days to complete full grid (multiples of 7)
-  const remainingCells = 7 - (cells.length % 7);
-  if (remainingCells < 7) {
-    for (let day = 1; day <= remainingCells; day++) {
-      const d = new Date(year, month + 1, day);
-      const dateStr = d.toISOString().split('T')[0];
-      cells.push({
-        date: d,
-        dateStr,
-        dayNumber: day,
-        isCurrentMonth: false,
-        isToday: dateStr === todayDateStr,
-      });
-    }
-  }
+  // Generate grid using local date calculations
+  const cells: CalendarCell[] = generateMonthGrid(year, month, new Date());
 
   // Month navigation
-  const handlePrevMonth = () => {
-    setCurrentDate(new Date(year, month - 1, 1));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentDate(new Date(year, month + 1, 1));
-  };
-
+  const handlePrevMonth = () => setCurrentDate((prev) => goToPreviousMonth(prev));
+  const handleNextMonth = () => setCurrentDate((prev) => goToNextMonth(prev));
   const handleToday = () => {
-    setCurrentDate(new Date());
-    setSelectedDayDate(todayDateStr);
+    const now = goToToday();
+    setCurrentDate(now);
+    setSelectedDayDate(formatLocalDate(now));
   };
 
-  // Header Title: e.g. "September 2026"
-  const monthName = currentDate.toLocaleString('default', { month: 'long' });
-  const headerTitle = `${monthName} ${year}`;
+  // Header Title in local timezone: e.g. "September 2026"
+  const headerTitle = currentDate.toLocaleDateString(undefined, {
+    month: 'long',
+    year: 'numeric',
+  });
 
   const weekDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  // Map meetings & calendar events by date string
+  // Map meetings strictly by local date string
   const getEventsForDate = (dateStr: string) => {
-    const dayMeetings = meetings.filter((m) => m.date === dateStr);
-    return dayMeetings;
+    return meetings.filter((m) => m.date === dateStr);
   };
 
   const selectedDayMeetings = getEventsForDate(selectedDayDate);
 
-  // Platform icon helper
   const renderPlatformBadge = (platform?: MeetingPlatform) => {
     switch (platform) {
       case 'google_meet':
-        return <span className="text-[10px] text-emerald-700 font-medium">Meet</span>;
+        return <span className="text-[10px] text-emerald-700 font-medium">Google Meet</span>;
       case 'zoom':
         return <span className="text-[10px] text-blue-700 font-medium">Zoom</span>;
       case 'teams':
@@ -152,9 +99,8 @@ export const CalendarDashboard: React.FC<CalendarDashboardProps> = ({
     }
   };
 
-  // State indicator helper
   const renderStatePill = (m: Meeting) => {
-    const state = m.meetingState || (m.status === 'completed' ? 'completed' : 'upcoming');
+    const state = m.meetingState || (m.status === 'completed' ? 'completed' : 'scheduled');
     if (state === 'recording') {
       return (
         <span className="flex items-center gap-1 text-[9px] font-mono text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded animate-pulse">
@@ -171,7 +117,7 @@ export const CalendarDashboard: React.FC<CalendarDashboardProps> = ({
         </span>
       );
     }
-    if (state === 'completed') {
+    if (state === 'completed' || m.status === 'completed') {
       return (
         <span className="flex items-center gap-1 text-[9px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
           <CheckCircle2 className="w-2.5 h-2.5" />
@@ -179,23 +125,16 @@ export const CalendarDashboard: React.FC<CalendarDashboardProps> = ({
         </span>
       );
     }
-    if (state === 'no_recording') {
-      return (
-        <span className="text-[9px] font-mono text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">
-          No recording
-        </span>
-      );
-    }
     return (
       <span className="text-[9px] font-mono text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">
-        Upcoming
+        Scheduled
       </span>
     );
   };
 
   return (
     <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 font-sans animate-in fade-in duration-150">
-      {/* Google Calendar Style Header Controls */}
+      {/* Month Navigation & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-semibold text-zinc-900 tracking-tight min-w-[200px]">
@@ -228,11 +167,11 @@ export const CalendarDashboard: React.FC<CalendarDashboardProps> = ({
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => onAddExistingMeeting(todayDateStr)}
+            onClick={() => onAddExistingMeeting(selectedDayDate || todayStr)}
             className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium bg-zinc-900 text-white hover:bg-zinc-800 rounded-md transition-all shadow-2xs"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Add Existing Meeting</span>
+            <span>+ Add Existing Meeting</span>
           </button>
         </div>
       </div>
@@ -318,16 +257,16 @@ export const CalendarDashboard: React.FC<CalendarDashboardProps> = ({
         </div>
       </div>
 
-      {/* Selected Day Agenda / Meeting Details Drawer for Mobile or Quick View */}
+      {/* Selected Day Agenda Drawer */}
       <div className="mt-6 bg-white border border-zinc-200 rounded-xl p-5 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-zinc-100">
           <div>
             <h3 className="text-sm font-semibold text-zinc-900">
-              Schedule for {new Date(selectedDayDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              Schedule for {formatDisplayDate(selectedDayDate)}
             </h3>
             <p className="text-xs text-zinc-500 mt-0.5">
               {selectedDayMeetings.length === 0
-                ? 'No external meetings scheduled for this date.'
+                ? 'No meetings scheduled.'
                 : `${selectedDayMeetings.length} meeting(s) recorded.`}
             </p>
           </div>
@@ -344,7 +283,7 @@ export const CalendarDashboard: React.FC<CalendarDashboardProps> = ({
         {selectedDayMeetings.length === 0 ? (
           <div className="border border-dashed border-zinc-200 rounded-lg p-8 text-center text-xs text-zinc-400">
             <CalendarIcon className="w-6 h-6 text-zinc-300 mx-auto mb-2" />
-            No external meetings registered for this date.
+            No meetings scheduled.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -357,10 +296,12 @@ export const CalendarDashboard: React.FC<CalendarDashboardProps> = ({
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono font-medium text-zinc-700">
-                      {m.startTime || '10:00'} – {m.endTime || '10:45'}
+                      {m.startTime || '10:00'}
                     </span>
                     <span className="text-zinc-300">•</span>
                     {renderPlatformBadge(m.platform)}
+                    <span className="text-zinc-300">•</span>
+                    <span className="text-xs font-mono text-zinc-500">{m.durationMinutes} min</span>
                   </div>
                   {renderStatePill(m)}
                 </div>
@@ -370,10 +311,10 @@ export const CalendarDashboard: React.FC<CalendarDashboardProps> = ({
                 </h4>
 
                 <p className="text-[11px] text-zinc-500 line-clamp-2">
-                  {m.summary || (m.meetingState === 'completed' ? 'Processing finished.' : 'Scheduled session. Click to view intelligence or prepare recording.')}
+                  {m.summary || (m.status === 'completed' ? 'Processing finished.' : 'Scheduled session. Click to view intelligence or prepare recording.')}
                 </p>
 
-                {m.participants.length > 0 && (
+                {m.participants && m.participants.length > 0 && (
                   <div className="mt-3 flex items-center gap-1.5 text-[10px] text-zinc-400 font-mono">
                     <Users className="w-3 h-3" />
                     <span>{m.participants.join(', ')}</span>
