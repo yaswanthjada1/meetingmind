@@ -20,6 +20,7 @@ interface TestResult {
 
 export const DiagnosticPanelModal: React.FC<DiagnosticPanelModalProps> = ({ isOpen, onClose, userId = 'default_user' }) => {
   const [ollamaStatus, setOllamaStatus] = useState<any>(null);
+  const [sttStatus, setSttStatus] = useState<STTProviderStatus | null>(null);
 
   const [fastTest, setFastTest] = useState<TestResult>({ status: 'idle' });
   const [primaryTest, setPrimaryTest] = useState<TestResult>({ status: 'idle' });
@@ -33,7 +34,7 @@ export const DiagnosticPanelModal: React.FC<DiagnosticPanelModalProps> = ({ isOp
   const [recSnapshot, setRecSnapshot] = useState(recordingManager.getSnapshot());
 
   /**
-   * Fast diagnostic check — tags and storage metrics only.
+   * Fast diagnostic check — tags, STT capability, and storage metrics only.
    * Purges orphaned chunks to guarantee strict resource:chunk relationships.
    */
   const loadConnectivityAndStorage = async () => {
@@ -41,7 +42,15 @@ export const DiagnosticPanelModal: React.FC<DiagnosticPanelModalProps> = ({ isOp
     const health = await checkOllamaHealth();
     setOllamaStatus(health);
 
-    // 2. Query IndexedDB metrics
+    // 2. Check real STT capability status
+    try {
+      const stt = await defaultTranscriptionProvider.getStatus();
+      setSttStatus(stt);
+    } catch (e) {
+      console.warn('Diagnostic STT error:', e);
+    }
+
+    // 3. Query IndexedDB metrics
     try {
       await resourceIngestion.purgeOrphanedChunks();
 
@@ -333,7 +342,7 @@ export const DiagnosticPanelModal: React.FC<DiagnosticPanelModalProps> = ({ isOp
         </section>
 
         {/* 4. Audio Capture & MediaRecorder Diagnostics */}
-        <section className="space-y-2">
+        <section className="mb-5 space-y-2">
           <h4 className="text-[11px] font-mono uppercase text-zinc-400 font-semibold flex items-center gap-1.5">
             <Mic className="w-3.5 h-3.5 text-zinc-500" />
             <span>4. Audio Stream & MediaRecorder Diagnostics</span>
@@ -357,6 +366,32 @@ export const DiagnosticPanelModal: React.FC<DiagnosticPanelModalProps> = ({ isOp
             {recSnapshot.errorMessage && (
               <div className="mt-2 p-2 rounded bg-rose-50 border border-rose-200 text-rose-800 text-[11px]">
                 {recSnapshot.errorMessage}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* 5. Real STT Provider Capability */}
+        <section className="space-y-2">
+          <h4 className="text-[11px] font-mono uppercase text-zinc-400 font-semibold flex items-center gap-1.5">
+            <Volume2 className="w-3.5 h-3.5 text-zinc-500" />
+            <span>5. Real Speech-To-Text (STT) Provider Status</span>
+          </h4>
+
+          <div className="p-3 rounded-md bg-zinc-50 border border-zinc-200 space-y-2 font-mono text-xs">
+            <div className="flex items-center justify-between">
+              <span>Configured Provider:</span>
+              <span className="font-semibold text-zinc-900">{sttStatus?.name || 'Local STT Engine'}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>STT Service Availability:</span>
+              <span className={`font-semibold ${sttStatus?.available ? 'text-emerald-700' : 'text-amber-700'}`}>
+                {sttStatus?.available ? '● CONNECTED' : '○ UNAVAILABLE'}
+              </span>
+            </div>
+            {sttStatus?.detail && (
+              <div className={`p-2.5 rounded text-[11px] leading-relaxed ${sttStatus.available ? 'bg-emerald-50 border border-emerald-200 text-emerald-900' : 'bg-amber-50 border border-amber-200 text-amber-900'}`}>
+                {sttStatus.detail}
               </div>
             )}
           </div>

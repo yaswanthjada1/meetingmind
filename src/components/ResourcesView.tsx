@@ -77,17 +77,17 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({
   const renderFileIcon = (fileType: string) => {
     switch (fileType) {
       case 'pdf':
-        return <span className="text-[10px] font-mono font-bold text-rose-700 uppercase bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded">PDF</span>;
+        return <span className="text-[10px] font-mono font-bold text-black uppercase bg-zinc-100 border border-zinc-300 px-1.5 py-0.5 rounded">PDF</span>;
       case 'docx':
-        return <span className="text-[10px] font-mono font-bold text-blue-700 uppercase bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">DOCX</span>;
+        return <span className="text-[10px] font-mono font-bold text-black uppercase bg-zinc-100 border border-zinc-300 px-1.5 py-0.5 rounded">DOCX</span>;
       case 'md':
-        return <span className="text-[10px] font-mono font-bold text-indigo-700 uppercase bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">MD</span>;
+        return <span className="text-[10px] font-mono font-bold text-black uppercase bg-zinc-100 border border-zinc-300 px-1.5 py-0.5 rounded">MD</span>;
       case 'txt':
-        return <span className="text-[10px] font-mono font-bold text-zinc-700 uppercase bg-zinc-100 border border-zinc-200 px-1.5 py-0.5 rounded">TXT</span>;
+        return <span className="text-[10px] font-mono font-bold text-black uppercase bg-zinc-100 border border-zinc-300 px-1.5 py-0.5 rounded">TXT</span>;
       case 'csv':
-        return <span className="text-[10px] font-mono font-bold text-emerald-700 uppercase bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">CSV</span>;
+        return <span className="text-[10px] font-mono font-bold text-black uppercase bg-zinc-100 border border-zinc-300 px-1.5 py-0.5 rounded">CSV</span>;
       default:
-        return <span className="text-[10px] font-mono font-bold text-zinc-700 uppercase bg-zinc-100 border border-zinc-200 px-1.5 py-0.5 rounded">DOC</span>;
+        return <span className="text-[10px] font-mono font-bold text-black uppercase bg-zinc-100 border border-zinc-300 px-1.5 py-0.5 rounded">DOC</span>;
     }
   };
 
@@ -207,8 +207,8 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({
 
                 <div className="flex items-center gap-2 self-start sm:self-center">
                   {doc.status === 'indexed' ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-mono font-medium text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono font-medium text-black bg-zinc-100 border border-zinc-300 px-2 py-0.5 rounded">
+                      <CheckCircle2 className="w-3 h-3 text-black" />
                       Indexed
                     </span>
                   ) : doc.status === 'embedding_incomplete' ? (
@@ -217,13 +217,13 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({
                       ⚠ Embedding incomplete
                     </span>
                   ) : doc.status === 'processing' || doc.status === 'extracting' ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-mono text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-spin" />
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono text-black bg-zinc-100 border border-zinc-300 px-2 py-0.5 rounded">
+                      <span className="w-1.5 h-1.5 rounded-full bg-black animate-spin" />
                       Indexing...
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-mono text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded">
-                      <AlertCircle className="w-3 h-3 text-rose-600" />
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono text-white bg-black border border-black px-2 py-0.5 rounded">
+                      <AlertCircle className="w-3 h-3 text-white" />
                       Failed
                     </span>
                   )}

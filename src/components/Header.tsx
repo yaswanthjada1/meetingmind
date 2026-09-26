@@ -201,9 +201,9 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="relative" ref={queueRef}>
             <button
               onClick={() => setIsQueueMenuOpen(!isQueueMenuOpen)}
-              className="flex items-center gap-1.5 text-xs font-mono text-amber-800 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-md shadow-2xs hover:bg-amber-100 transition-colors"
+              className="flex items-center gap-1.5 text-xs font-mono text-black bg-zinc-100 border border-zinc-300 px-2.5 py-1 rounded-md shadow-2xs hover:bg-zinc-200 transition-colors"
             >
-              <Loader2 className="w-3.5 h-3.5 text-amber-600 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 text-black animate-spin" />
               <span>Processing ({activeJobs.length})</span>
             </button>
 
@@ -291,7 +291,6 @@ export const Header: React.FC<HeaderProps> = ({
                   <SettingsIcon className="w-3.5 h-3.5 text-zinc-500" />
                   <span>Settings & Privacy</span>
                 </button>
-
                 <div className="border-t border-zinc-100 my-1" />
 
                 <button
@@ -299,7 +298,7 @@ export const Header: React.FC<HeaderProps> = ({
                     setIsUserMenuOpen(false);
                     onSignOut();
                   }}
-                  className="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2 text-zinc-600 hover:text-rose-700"
+                  className="w-full text-left px-3 py-2 hover:bg-zinc-100 flex items-center gap-2 text-zinc-600 hover:text-black"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Sign out</span>

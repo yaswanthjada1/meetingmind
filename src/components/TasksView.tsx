@@ -196,7 +196,7 @@ export const TasksView: React.FC<TasksViewProps> = ({ userId = '', onSelectMeeti
               <div
                 key={task.id}
                 className={`bg-white border rounded-lg p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
-                  isOverdue ? 'border-rose-200 bg-rose-50/20' : 'border-zinc-200 hover:border-zinc-300'
+                  isOverdue ? 'border-black bg-zinc-50' : 'border-zinc-200 hover:border-zinc-300'
                 }`}
               >
                 <div className="flex items-start gap-2.5">
@@ -205,7 +205,7 @@ export const TasksView: React.FC<TasksViewProps> = ({ userId = '', onSelectMeeti
                     className="mt-0.5 text-zinc-400 hover:text-zinc-900"
                   >
                     {isDone ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 fill-emerald-50" />
+                      <CheckCircle2 className="w-4 h-4 text-black" />
                     ) : (
                       <Circle className="w-4 h-4 text-zinc-300 hover:text-zinc-500" />
                     )}
@@ -237,7 +237,7 @@ export const TasksView: React.FC<TasksViewProps> = ({ userId = '', onSelectMeeti
                     <span
                       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] ${
                         isOverdue
-                          ? 'bg-rose-100 text-rose-800 font-bold'
+                          ? 'bg-black text-white font-bold'
                           : 'bg-zinc-100 text-zinc-500'
                       }`}
                     >

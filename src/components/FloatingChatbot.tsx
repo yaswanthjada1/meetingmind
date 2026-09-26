@@ -155,7 +155,7 @@ export const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ userId = 'defa
             className="w-12 h-12 rounded-full bg-zinc-900 hover:bg-black text-white flex items-center justify-center shadow-lg hover:scale-105 transition-all group relative border border-zinc-700"
             title="Ask MeetingMind"
           >
-            <Sparkles className="w-5 h-5 text-zinc-100" />
+            <Bot className="w-5 h-5 text-zinc-100" />
             <div className="absolute right-14 px-2.5 py-1 bg-zinc-900 text-white text-[11px] rounded shadow-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap">
               Ask MeetingMind
             </div>
@@ -165,18 +165,15 @@ export const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ userId = 'defa
           <div className="w-80 sm:w-96 bg-white border border-zinc-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[460px] animate-in slide-in-from-bottom-5 duration-150 font-sans">
             {/* Header */}
             <div className="px-4 py-3 bg-zinc-900 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-zinc-300" />
-                <div>
-                  <h3 className="text-xs font-semibold">MeetingMind</h3>
-                  <p className="text-[10px] text-zinc-400 font-mono">
-                    {currentContext?.resourceTitle
-                      ? `Doc: ${currentContext.resourceTitle}`
-                      : currentContext?.meetingTitle
-                      ? `Meeting: ${currentContext.meetingTitle}`
-                      : 'Context: Knowledge & Memory'}
-                  </p>
-                </div>
+              <div>
+                <h3 className="text-xs font-semibold">MeetingMind</h3>
+                <p className="text-[10px] text-zinc-400 font-mono">
+                  {currentContext?.resourceTitle
+                    ? `Doc: ${currentContext.resourceTitle}`
+                    : currentContext?.meetingTitle
+                    ? `Meeting: ${currentContext.meetingTitle}`
+                    : 'Context: Knowledge & Memory'}
+                </p>
               </div>
 
               <button
@@ -234,7 +231,7 @@ export const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ userId = 'defa
                   onClick={toggleMic}
                   className={`p-2 rounded-lg transition-colors ${
                     isListening
-                      ? 'bg-rose-600 text-white animate-pulse'
+                      ? 'bg-black text-white animate-pulse'
                       : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
                   }`}
                   title="Voice input"

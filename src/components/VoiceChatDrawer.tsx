@@ -171,7 +171,7 @@ export const VoiceChatDrawer: React.FC<VoiceChatDrawerProps> = ({
       {/* Drawer Header */}
       <div className="p-4 border-b border-stone-200 bg-stone-50 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-stone-900 text-amber-50 flex items-center justify-center font-serif text-sm font-bold">
+          <div className="w-7 h-7 rounded-lg bg-black text-white flex items-center justify-center font-serif text-sm font-bold">
             M
           </div>
           <div>
@@ -184,7 +184,7 @@ export const VoiceChatDrawer: React.FC<VoiceChatDrawerProps> = ({
           <button
             onClick={() => setIsTTSActive(!isTTSActive)}
             className={`p-1.5 rounded-md transition-colors ${
-              isTTSActive ? 'text-amber-800 bg-amber-100' : 'text-stone-400 hover:text-stone-700'
+              isTTSActive ? 'text-white bg-black' : 'text-stone-400 hover:text-stone-700'
             }`}
             title="Toggle Text-to-Speech Output"
           >
@@ -200,7 +200,7 @@ export const VoiceChatDrawer: React.FC<VoiceChatDrawerProps> = ({
       </div>
 
       {/* Messages Stream */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#FAF9F5]/40 text-xs">
+      <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-zinc-50/50 text-xs">
         {messages.map((msg) => {
           const isAgent = msg.sender === 'agent';
 
@@ -225,7 +225,7 @@ export const VoiceChatDrawer: React.FC<VoiceChatDrawerProps> = ({
                   <div className="mt-3 pt-2.5 border-t border-stone-100">
                     <button
                       onClick={() => handleConfirmBooking(msg.actionPayload)}
-                      className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white rounded-md transition-all shadow-xs"
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-black hover:bg-zinc-800 text-white rounded-md transition-all shadow-xs"
                     >
                       <CheckCircle className="w-3.5 h-3.5" />
                       <span>Confirm & Book for {msg.actionPayload.recommendedSlot.timeLabel}</span>
@@ -238,7 +238,7 @@ export const VoiceChatDrawer: React.FC<VoiceChatDrawerProps> = ({
                   <div className="mt-3 pt-2 border-t border-stone-100 flex items-center justify-between">
                     <button
                       onClick={() => setSelectedEvidence(msg.evidence!)}
-                      className="flex items-center gap-1 text-[11px] font-mono text-amber-800 hover:underline"
+                      className="flex items-center gap-1 text-[11px] font-mono text-black hover:underline"
                     >
                       <Sparkles className="w-3 h-3" />
                       <span>Why? View Evidence</span>
@@ -270,7 +270,7 @@ export const VoiceChatDrawer: React.FC<VoiceChatDrawerProps> = ({
 
         {isThinking && (
           <div className="flex items-center gap-2 text-xs font-mono text-stone-400 p-2">
-            <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
             <span>Reasoning over memory & constraints...</span>
           </div>
         )}
@@ -284,7 +284,7 @@ export const VoiceChatDrawer: React.FC<VoiceChatDrawerProps> = ({
             onClick={toggleMic}
             className={`p-2 rounded-lg transition-all ${
               isListening
-                ? 'bg-rose-600 text-white animate-pulse'
+                ? 'bg-black text-white animate-pulse'
                 : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
             }`}
             title={isListening ? 'Stop listening' : 'Start voice input'}

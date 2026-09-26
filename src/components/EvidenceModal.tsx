@@ -26,7 +26,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
         </button>
 
         <div className="flex items-center gap-2 mb-4">
-          <div className="p-2 rounded-lg bg-amber-100 text-amber-900">
+          <div className="p-2 rounded-lg bg-black text-white">
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
@@ -67,7 +67,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
               <ul className="space-y-1 bg-stone-50 p-3 rounded-lg border border-stone-200 text-stone-700">
                 {evidence.constraints.map((c, i) => (
                   <li key={i} className="flex items-start gap-1.5">
-                    <span className="text-amber-700 font-bold">•</span>
+                    <span className="text-black font-bold">•</span>
                     <span>{c}</span>
                   </li>
                 ))}
