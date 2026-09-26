@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #FCFCFD;
+    color: #18181B;
+  }
+}
+
+/* Minimal subtle scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #E4E4E7;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #A1A1AA;
+}
