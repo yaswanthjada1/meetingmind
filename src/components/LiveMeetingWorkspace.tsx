@@ -322,8 +322,8 @@ export const LiveMeetingWorkspace: React.FC<LiveMeetingWorkspaceProps> = ({
         <div className="flex items-center gap-2">
           {meetingState === 'live' && (
             <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-mono font-medium">
-                <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-black text-white text-xs font-mono font-medium">
+                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
                 ● LIVE · Recording {formatTimer(recordSeconds)}
               </span>
 
@@ -358,7 +358,7 @@ export const LiveMeetingWorkspace: React.FC<LiveMeetingWorkspaceProps> = ({
               </button>
               <button
                 onClick={handleEndMeeting}
-                className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-xs font-medium"
+                className="px-3 py-1 bg-black hover:bg-zinc-800 text-white rounded-md text-xs font-medium"
               >
                 End Meeting
               </button>
@@ -401,16 +401,16 @@ export const LiveMeetingWorkspace: React.FC<LiveMeetingWorkspaceProps> = ({
 
       {/* Transcription Notice */}
       {transcriptionNotice && (meetingState === 'live' || meetingState === 'paused') && (
-        <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-start gap-2">
-          <MicOff className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+        <div className="mb-4 p-3 rounded-lg bg-zinc-100 border border-black text-xs text-black flex items-start gap-2">
+          <MicOff className="w-4 h-4 text-black shrink-0 mt-0.5" />
           <span>{transcriptionNotice}</span>
         </div>
       )}
 
       {/* Mic permission status */}
       {micAvailable === false && (meetingState === 'live' || meetingState === 'paused') && (
-        <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2">
-          <MicOff className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+        <div className="mb-4 p-3 rounded-lg bg-zinc-100 border border-black text-xs text-black flex items-start gap-2">
+          <MicOff className="w-4 h-4 text-black shrink-0 mt-0.5" />
           <span>Microphone access was denied. Recording is running in simulated mode. Grant microphone permission and restart the meeting for real recording.</span>
         </div>
       )}
@@ -459,10 +459,10 @@ export const LiveMeetingWorkspace: React.FC<LiveMeetingWorkspaceProps> = ({
       {/* Completed State — Show Meeting Summary */}
       {meetingState === 'completed' && (
         <div className="space-y-6 my-4">
-          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-center">
-            <CheckCircle2 className="w-6 h-6 text-emerald-600 mx-auto mb-2" />
-            <h3 className="text-sm font-semibold text-emerald-900">Meeting Completed</h3>
-            <p className="text-xs text-emerald-700 mt-1">
+          <div className="p-4 bg-zinc-100 border border-black rounded-lg text-center">
+            <CheckCircle2 className="w-6 h-6 text-black mx-auto mb-2" />
+            <h3 className="text-sm font-semibold text-black">Meeting Completed</h3>
+            <p className="text-xs text-black mt-1">
               All data has been saved to local memory and is now searchable.
             </p>
           </div>

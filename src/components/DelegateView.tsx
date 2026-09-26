@@ -172,7 +172,7 @@ export const DelegateView: React.FC<DelegateViewProps> = ({ userId = '', onSelec
           >
             <div className="flex items-center justify-between mb-1">
               <span className="font-medium text-zinc-900">Answer Questions</span>
-              <span className="px-1.5 py-0.5 rounded font-mono text-[9px] font-bold uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">
+              <span className="px-1.5 py-0.5 rounded font-mono text-[9px] font-bold uppercase bg-black text-white">
                 {permissions.canAnswerQuestions ? 'ALLOW' : 'DENY'}
               </span>
             </div>
@@ -186,7 +186,7 @@ export const DelegateView: React.FC<DelegateViewProps> = ({ userId = '', onSelec
           >
             <div className="flex items-center justify-between mb-1">
               <span className="font-medium text-zinc-900">Retrieve History</span>
-              <span className="px-1.5 py-0.5 rounded font-mono text-[9px] font-bold uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">
+              <span className="px-1.5 py-0.5 rounded font-mono text-[9px] font-bold uppercase bg-black text-white">
                 {permissions.canRetrieveHistory ? 'ALLOW' : 'DENY'}
               </span>
             </div>
@@ -203,8 +203,8 @@ export const DelegateView: React.FC<DelegateViewProps> = ({ userId = '', onSelec
               <span
                 className={`px-1.5 py-0.5 rounded font-mono text-[9px] font-bold uppercase ${
                   permissions.canChangeDeadlines
-                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                    : 'bg-zinc-200 text-zinc-800'
+                    ? 'bg-black text-white'
+                    : 'bg-zinc-100 text-black border border-zinc-300'
                 }`}
               >
                 {permissions.canChangeDeadlines ? 'ALLOW' : 'ASK / REFUSE'}
@@ -223,8 +223,8 @@ export const DelegateView: React.FC<DelegateViewProps> = ({ userId = '', onSelec
               <span
                 className={`px-1.5 py-0.5 rounded font-mono text-[9px] font-bold uppercase ${
                   permissions.canMakeTechnicalDecisions
-                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                    : 'bg-rose-50 text-rose-800 border border-rose-200'
+                    ? 'bg-black text-white'
+                    : 'bg-zinc-100 text-black border border-zinc-300'
                 }`}
               >
                 {permissions.canMakeTechnicalDecisions ? 'ALLOW' : 'DENY'}

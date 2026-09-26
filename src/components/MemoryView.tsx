@@ -95,7 +95,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ onSelectMeeting }) => {
         <div className="mb-10 animate-in fade-in duration-150">
           <div className="flex items-center justify-between mb-3 text-xs font-mono uppercase tracking-wider text-stone-500">
             <span>Retrieved Evidence ({searchResults.length} matches)</span>
-            <span className="text-[10px] text-emerald-700 font-normal">IndexedDB Local Match</span>
+            <span className="text-[10px] text-zinc-500 font-normal">IndexedDB Local Match</span>
           </div>
 
           {searchResults.length === 0 ? (
@@ -119,13 +119,13 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ onSelectMeeting }) => {
                     </span>
                   </div>
 
-                  <p className="text-sm font-medium text-stone-900 group-hover:text-amber-950 mb-2">
+                  <p className="text-sm font-medium text-stone-900 group-hover:text-black mb-2">
                     {item.content}
                   </p>
 
                   <div className="flex items-center justify-between pt-2 border-t border-stone-100 text-xs text-stone-500 font-mono">
                     <span>Source: {item.sourceMeetingTitle} ({item.date})</span>
-                    <span className="flex items-center gap-1 text-amber-800 text-[11px] font-sans group-hover:underline">
+                    <span className="flex items-center gap-1 text-black text-[11px] font-sans group-hover:underline">
                       Open Meeting <ExternalLink className="w-3 h-3" />
                     </span>
                   </div>
@@ -150,7 +150,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ onSelectMeeting }) => {
             onClick={() => setActiveTab(tab.id)}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
               activeTab === tab.id
-                ? 'bg-stone-900 text-stone-50'
+                ? 'bg-black text-white'
                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
             }`}
           >
@@ -165,11 +165,11 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ onSelectMeeting }) => {
           {allMeetings.map((meet) => (
             <div key={meet.id} className="relative group">
               {/* Timeline marker */}
-              <div className="absolute -left-6 sm:-left-8 top-1.5 w-4 h-4 rounded-full bg-white border-2 border-amber-600 shadow-2xs" />
+              <div className="absolute -left-6 sm:-left-8 top-1.5 w-4 h-4 rounded-full bg-white border-2 border-black shadow-2xs" />
 
               <div className="paper-sheet rounded-xl p-5 hover:border-stone-400 transition-all">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
-                  <span className="font-mono text-xs font-semibold text-amber-900">
+                  <span className="font-mono text-xs font-semibold text-black">
                     {meet.date}
                   </span>
                   <button
@@ -183,7 +183,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ onSelectMeeting }) => {
 
                 <h3
                   onClick={() => onSelectMeeting(meet.id)}
-                  className="font-serif text-lg font-semibold text-stone-900 hover:text-amber-900 cursor-pointer mb-2"
+                  className="font-serif text-lg font-semibold text-stone-900 hover:text-black cursor-pointer mb-2"
                 >
                   {meet.title}
                 </h3>
@@ -197,7 +197,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ onSelectMeeting }) => {
                     <div className="space-y-1.5">
                       {meet.decisions.map((d) => (
                         <div key={d.id} className="text-xs text-stone-800 flex items-start gap-1.5">
-                          <span className="text-emerald-600 font-bold">•</span>
+                          <span className="text-black font-bold">•</span>
                           <span><strong>{d.decision}</strong> {d.reason ? `— ${d.reason}` : ''}</span>
                         </div>
                       ))}
@@ -238,7 +238,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ onSelectMeeting }) => {
             <div key={dec.id} className="paper-sheet rounded-xl p-5">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-mono text-stone-400">{dec.date}</span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-100 text-black border border-zinc-300">
                   {dec.status}
                 </span>
               </div>
@@ -260,7 +260,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ onSelectMeeting }) => {
                 <span>Participants: {dec.participants.join(', ')}</span>
                 <button
                   onClick={() => onSelectMeeting(dec.sourceMeetingId)}
-                  className="text-amber-800 hover:underline flex items-center gap-1 font-sans"
+                  className="text-black hover:underline flex items-center gap-1 font-sans"
                 >
                   Source: {dec.sourceMeetingTitle || 'Meeting'}
                   <ExternalLink className="w-3 h-3" />
@@ -282,7 +282,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ onSelectMeeting }) => {
               <div
                 key={com.id}
                 className={`paper-sheet rounded-xl p-5 border ${
-                  isOverdue ? 'bg-rose-50/30 border-rose-200' : ''
+                  isOverdue ? 'bg-zinc-100 border-black' : ''
                 }`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
@@ -299,10 +299,10 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ onSelectMeeting }) => {
                     <span
                       className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                         isOverdue
-                          ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                          ? 'bg-black text-white border border-black'
                           : isCompleted
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-amber-100 text-amber-800'
+                          ? 'bg-zinc-100 text-black border border-zinc-300'
+                          : 'bg-zinc-100 text-black border border-zinc-300'
                       }`}
                     >
                       {com.status}
@@ -314,7 +314,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ onSelectMeeting }) => {
                   <span>Confidence: {(com.confidence * 100).toFixed(0)}%</span>
                   <button
                     onClick={() => com.sourceMeetingId && onSelectMeeting(com.sourceMeetingId)}
-                    className="text-amber-800 hover:underline flex items-center gap-1 font-sans"
+                    className="text-black hover:underline flex items-center gap-1 font-sans"
                   >
                     Source: {com.sourceMeetingTitle || 'Meeting'}
                     <ExternalLink className="w-3 h-3" />

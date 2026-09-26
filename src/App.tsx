@@ -110,7 +110,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FCFCFD] text-zinc-800 flex font-sans selection:bg-zinc-200 selection:text-zinc-900">
+    <div className="min-h-screen bg-white text-black flex font-sans selection:bg-black selection:text-white">
       {/* Left Vertical Sidebar */}
       <Sidebar
         activeTab={activeTab}

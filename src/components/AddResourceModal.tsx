@@ -202,8 +202,8 @@ export const AddResourceModal: React.FC<AddResourceModalProps> = ({
 
           {/* Duplicate warning */}
           {duplicateWarning && (
-            <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-md flex items-start gap-2 text-xs text-amber-800">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="p-2.5 bg-zinc-100 border border-black rounded-md flex items-start gap-2 text-xs text-black">
+              <AlertCircle className="w-4 h-4 text-black shrink-0 mt-0.5" />
               <div>
                 <span className="font-semibold">Duplicate document detected:</span> A file named{' '}
                 <span className="font-mono">{duplicateWarning.filename}</span> is already indexed. Submitting will update/re-index it.
@@ -213,7 +213,7 @@ export const AddResourceModal: React.FC<AddResourceModalProps> = ({
 
           {/* Error Message */}
           {errorMessage && (
-            <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-md text-xs text-rose-700">
+            <div className="p-2.5 bg-zinc-100 border border-black rounded-md text-xs text-black">
               {errorMessage}
             </div>
           )}

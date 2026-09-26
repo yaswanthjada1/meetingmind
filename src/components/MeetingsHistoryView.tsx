@@ -50,19 +50,19 @@ export const MeetingsHistoryView: React.FC<MeetingsHistoryViewProps> = ({
   const renderPlatformBadge = (platform?: MeetingPlatform) => {
     switch (platform) {
       case 'google_meet':
-        return <span className="text-[10px] text-emerald-700 font-medium">Google Meet</span>;
+        return <span className="text-[10px] text-black font-mono font-medium border border-zinc-200 bg-white px-1.5 py-0.5 rounded">Meet</span>;
       case 'zoom':
-        return <span className="text-[10px] text-blue-700 font-medium">Zoom</span>;
+        return <span className="text-[10px] text-black font-mono font-medium border border-zinc-200 bg-white px-1.5 py-0.5 rounded">Zoom</span>;
       case 'teams':
-        return <span className="text-[10px] text-indigo-700 font-medium">Teams</span>;
+        return <span className="text-[10px] text-black font-mono font-medium border border-zinc-200 bg-white px-1.5 py-0.5 rounded">Teams</span>;
       case 'in_person':
-        return <span className="text-[10px] text-amber-800 font-medium">In-person</span>;
+        return <span className="text-[10px] text-black font-mono font-medium border border-zinc-200 bg-white px-1.5 py-0.5 rounded">In-person</span>;
       case 'discord':
-        return <span className="text-[10px] text-purple-700 font-medium">Discord</span>;
+        return <span className="text-[10px] text-black font-mono font-medium border border-zinc-200 bg-white px-1.5 py-0.5 rounded">Discord</span>;
       case 'phone':
-        return <span className="text-[10px] text-rose-700 font-medium">Phone</span>;
+        return <span className="text-[10px] text-black font-mono font-medium border border-zinc-200 bg-white px-1.5 py-0.5 rounded">Phone</span>;
       default:
-        return <span className="text-[10px] text-zinc-600 font-medium">External</span>;
+        return <span className="text-[10px] text-zinc-600 font-mono font-medium border border-zinc-200 bg-white px-1.5 py-0.5 rounded">External</span>;
     }
   };
 
@@ -138,17 +138,17 @@ export const MeetingsHistoryView: React.FC<MeetingsHistoryViewProps> = ({
 
                       <div className="flex items-center gap-2">
                         {m.meetingState === 'completed' || m.status === 'completed' ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span className="inline-flex items-center gap-1 text-[10px] font-mono text-white bg-black px-2 py-0.5 rounded">
+                            <CheckCircle2 className="w-3 h-3 text-white" />
                             Processed
                           </span>
                         ) : m.meetingState === 'processing' ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-mono text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-spin" />
+                          <span className="inline-flex items-center gap-1 text-[10px] font-mono text-black bg-zinc-100 px-2 py-0.5 rounded border border-black">
+                            <span className="w-1.5 h-1.5 rounded-full bg-black animate-spin" />
                             Processing
                           </span>
                         ) : (
-                          <span className="text-[10px] font-mono text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded">
+                          <span className="text-[10px] font-mono text-black bg-zinc-100 border border-zinc-300 px-2 py-0.5 rounded">
                             Upcoming
                           </span>
                         )}

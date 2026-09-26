@@ -227,19 +227,19 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
   const platformBadge = () => {
     switch (meeting.platform) {
       case 'google_meet':
-        return <span className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md font-medium">Google Meet</span>;
+        return <span className="text-xs text-black bg-white border border-zinc-300 px-2.5 py-0.5 rounded-md font-mono font-medium">Google Meet</span>;
       case 'zoom':
-        return <span className="text-xs text-blue-800 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-md font-medium">Zoom</span>;
+        return <span className="text-xs text-black bg-white border border-zinc-300 px-2.5 py-0.5 rounded-md font-mono font-medium">Zoom</span>;
       case 'teams':
-        return <span className="text-xs text-indigo-800 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-md font-medium">Microsoft Teams</span>;
+        return <span className="text-xs text-black bg-white border border-zinc-300 px-2.5 py-0.5 rounded-md font-mono font-medium">Microsoft Teams</span>;
       case 'in_person':
-        return <span className="text-xs text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-md font-medium">In-person Meeting</span>;
+        return <span className="text-xs text-black bg-white border border-zinc-300 px-2.5 py-0.5 rounded-md font-mono font-medium">In-person Meeting</span>;
       case 'discord':
-        return <span className="text-xs text-purple-800 bg-purple-50 border border-purple-200 px-2.5 py-0.5 rounded-md font-medium">Discord</span>;
+        return <span className="text-xs text-black bg-white border border-zinc-300 px-2.5 py-0.5 rounded-md font-mono font-medium">Discord</span>;
       case 'phone':
-        return <span className="text-xs text-rose-800 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-md font-medium">Phone / Voice Call</span>;
+        return <span className="text-xs text-black bg-white border border-zinc-300 px-2.5 py-0.5 rounded-md font-mono font-medium">Phone / Voice Call</span>;
       default:
-        return <span className="text-xs text-zinc-700 bg-zinc-100 border border-zinc-200 px-2.5 py-0.5 rounded-md font-medium">External Meeting</span>;
+        return <span className="text-xs text-black bg-white border border-zinc-300 px-2.5 py-0.5 rounded-md font-mono font-medium">External Meeting</span>;
     }
   };
 
@@ -325,9 +325,9 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
           {/* If currently recording */}
           {recordingState === 'recording' || recordingState === 'paused' ? (
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-md">
-                <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
-                <span className="text-xs font-mono font-semibold text-red-700">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-black text-white rounded-md">
+                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                <span className="text-xs font-mono font-semibold text-white">
                   {formatTimer(recDuration)}
                 </span>
               </div>
@@ -348,8 +348,8 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
               </button>
             </div>
           ) : isProcessing ? (
-            <div className="flex items-center gap-2 text-xs font-mono text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-md">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-spin" />
+            <div className="flex items-center gap-2 text-xs font-mono text-black bg-zinc-100 border border-black px-3 py-1.5 rounded-md">
+              <span className="w-2 h-2 rounded-full bg-black animate-spin" />
               <span>{processingStep} ({processingProgress}%)</span>
             </div>
           ) : (
@@ -468,7 +468,7 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
                           className="text-zinc-400 hover:text-zinc-900"
                         >
                           {isDone ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                            <CheckCircle2 className="w-4 h-4 text-black" />
                           ) : (
                             <Circle className="w-4 h-4 text-zinc-300" />
                           )}
@@ -528,7 +528,7 @@ export const MeetingDetail: React.FC<MeetingDetailProps> = ({
                 <ul className="space-y-2">
                   {meeting.unresolvedQuestions.map((q, idx) => (
                     <li key={idx} className="text-xs text-zinc-700 flex items-start gap-2">
-                      <HelpCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                      <HelpCircle className="w-3.5 h-3.5 text-black shrink-0 mt-0.5" />
                       <span>{q}</span>
                     </li>
                   ))}

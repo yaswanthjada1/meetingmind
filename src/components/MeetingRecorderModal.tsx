@@ -204,7 +204,7 @@ Yaswanth: Decision: We will maintain local-first storage using Dexie.js.`;
         </button>
 
         <div className="flex items-center gap-2 mb-4">
-          <div className="p-2 rounded-lg bg-amber-100 text-amber-800">
+          <div className="p-2 rounded-lg bg-black text-white">
             <Mic className="w-5 h-5" />
           </div>
           <div>
@@ -246,8 +246,8 @@ Yaswanth: Decision: We will maintain local-first storage using Dexie.js.`;
         {/* Live Recording Screen */}
         {isRecording && (
           <div className="py-6 text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-mono font-semibold mb-4 animate-pulse">
-              <span className="w-2 h-2 rounded-full bg-rose-600" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black text-white text-xs font-mono font-semibold mb-4 animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-white" />
               RECORDING LIVE
             </div>
 
@@ -257,11 +257,11 @@ Yaswanth: Decision: We will maintain local-first storage using Dexie.js.`;
 
             {/* Waveform Visualizer */}
             <div className="flex items-center justify-center gap-1.5 h-10 mb-6">
-              <div className="w-1.5 bg-amber-500 rounded-full wave-bar-1" />
-              <div className="w-1.5 bg-amber-600 rounded-full wave-bar-2" />
-              <div className="w-1.5 bg-amber-700 rounded-full wave-bar-3" />
-              <div className="w-1.5 bg-amber-600 rounded-full wave-bar-4" />
-              <div className="w-1.5 bg-amber-500 rounded-full wave-bar-5" />
+              <div className="w-1.5 bg-black rounded-full wave-bar-1" />
+              <div className="w-1.5 bg-black rounded-full wave-bar-2" />
+              <div className="w-1.5 bg-black rounded-full wave-bar-3" />
+              <div className="w-1.5 bg-black rounded-full wave-bar-4" />
+              <div className="w-1.5 bg-black rounded-full wave-bar-5" />
             </div>
 
             {/* Live Transcript Stream */}
@@ -271,7 +271,7 @@ Yaswanth: Decision: We will maintain local-first storage using Dexie.js.`;
               ) : (
                 liveTranscript.map((t, i) => (
                   <div key={i} className="leading-relaxed">
-                    <span className="text-amber-700 font-bold">• </span>
+                    <span className="text-black font-bold">• </span>
                     {t}
                   </div>
                 ))
@@ -283,7 +283,7 @@ Yaswanth: Decision: We will maintain local-first storage using Dexie.js.`;
         {/* Analyzing Screen */}
         {isAnalyzing && (
           <div className="py-10 text-center space-y-3">
-            <Loader2 className="w-8 h-8 text-amber-700 animate-spin mx-auto" />
+            <Loader2 className="w-8 h-8 text-black animate-spin mx-auto" />
             <div className="font-serif text-lg font-semibold text-stone-900">
               Analyzing Meeting
             </div>
@@ -303,9 +303,9 @@ Yaswanth: Decision: We will maintain local-first storage using Dexie.js.`;
               </button>
               <button
                 onClick={handleStartRecording}
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium bg-stone-900 text-stone-50 hover:bg-black rounded-lg transition-all shadow-xs"
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium bg-black text-white hover:bg-zinc-800 rounded-lg transition-all shadow-xs"
               >
-                <Mic className="w-3.5 h-3.5 text-amber-400" />
+                <Mic className="w-3.5 h-3.5 text-white" />
                 <span>Start Recording</span>
               </button>
             </>
@@ -314,7 +314,7 @@ Yaswanth: Decision: We will maintain local-first storage using Dexie.js.`;
           {isRecording && (
             <button
               onClick={handleStopAndAnalyze}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-all shadow-xs"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium bg-black hover:bg-zinc-800 text-white rounded-lg transition-all shadow-xs"
             >
               <Square className="w-3.5 h-3.5 fill-current" />
               <span>Stop Recording & Generate Notepad Notes</span>

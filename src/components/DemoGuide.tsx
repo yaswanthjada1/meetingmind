@@ -89,50 +89,50 @@ export const DemoGuide: React.FC<DemoGuideProps> = ({
   const activeStepObj = DEMO_STEPS[currentStep - 1] || DEMO_STEPS[0];
 
   return (
-    <div className="bg-amber-50/90 border-b border-amber-200/90 px-6 py-2.5 text-stone-800 transition-all shadow-2xs">
+    <div className="bg-zinc-100 border-b border-zinc-300 px-6 py-2.5 text-black transition-all shadow-2xs">
       <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-200 text-amber-900 text-xs font-mono font-bold">
+          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-black text-white text-xs font-mono font-bold">
             {activeStepObj.step}/9
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-xs text-amber-950 uppercase tracking-wider">
+              <span className="font-semibold text-xs text-black uppercase tracking-wider">
                 Demo Step {activeStepObj.step}:
               </span>
-              <span className="text-sm font-medium text-stone-900">{activeStepObj.title}</span>
+              <span className="text-sm font-medium text-zinc-900">{activeStepObj.title}</span>
             </div>
-            <p className="text-xs text-stone-600 mt-0.5 max-w-xl">{activeStepObj.description}</p>
+            <p className="text-xs text-zinc-600 mt-0.5 max-w-xl">{activeStepObj.description}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 self-end sm:self-center">
           <button
             onClick={() => onExecuteStep(activeStepObj.step)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-amber-900 text-amber-50 hover:bg-black rounded-md transition-all shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-black text-white hover:bg-zinc-800 rounded-md transition-all shadow-xs"
           >
-            <Play className="w-3 h-3 text-amber-300" />
+            <Play className="w-3 h-3 text-white" />
             <span>{activeStepObj.actionLabel}</span>
           </button>
 
-          <div className="flex items-center border-l border-amber-200 pl-2 space-x-1">
+          <div className="flex items-center border-l border-zinc-300 pl-2 space-x-1">
             <button
               disabled={currentStep <= 1}
               onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
-              className="px-2 py-1 text-xs text-stone-600 hover:text-stone-900 disabled:opacity-30 rounded hover:bg-amber-100"
+              className="px-2 py-1 text-xs text-zinc-600 hover:text-black disabled:opacity-30 rounded hover:bg-zinc-200"
             >
               Prev
             </button>
             <button
               disabled={currentStep >= DEMO_STEPS.length}
               onClick={() => setCurrentStep(Math.min(DEMO_STEPS.length, currentStep + 1))}
-              className="px-2 py-1 text-xs text-stone-600 hover:text-stone-900 disabled:opacity-30 rounded hover:bg-amber-100"
+              className="px-2 py-1 text-xs text-zinc-600 hover:text-black disabled:opacity-30 rounded hover:bg-zinc-200"
             >
               Next
             </button>
             <button
               onClick={onClose}
-              className="p-1 text-stone-500 hover:text-stone-800 rounded hover:bg-amber-100 ml-1"
+              className="p-1 text-zinc-500 hover:text-black rounded hover:bg-zinc-200 ml-1"
               title="Close guide bar"
             >
               <X className="w-3.5 h-3.5" />

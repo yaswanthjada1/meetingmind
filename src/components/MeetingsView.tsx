@@ -112,9 +112,9 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
 
           <button
             onClick={() => setIsRecorderOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium bg-stone-900 text-stone-50 hover:bg-black rounded-md transition-all shadow-xs"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium bg-black text-white hover:bg-zinc-800 rounded-md transition-all shadow-xs"
           >
-            <Mic className="w-3.5 h-3.5 text-amber-400" />
+            <Mic className="w-3.5 h-3.5 text-white" />
             <span>Record Meeting</span>
           </button>
         </div>
@@ -192,7 +192,7 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="font-serif text-lg font-semibold text-stone-900 group-hover:text-amber-900 transition-colors">
+                  <span className="font-serif text-lg font-semibold text-stone-900 group-hover:text-black transition-colors">
                     {meeting.title}
                   </span>
                 </div>
@@ -225,12 +225,12 @@ export const MeetingsView: React.FC<MeetingsViewProps> = ({
                 {/* Badges */}
                 <div className="flex items-center gap-2 font-mono text-[11px]">
                   {meeting.decisions && meeting.decisions.length > 0 && (
-                    <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    <span className="px-2 py-0.5 rounded bg-zinc-100 text-black border border-zinc-300">
                       {meeting.decisions.length} {meeting.decisions.length === 1 ? 'decision' : 'decisions'}
                     </span>
                   )}
                   {meeting.commitments && meeting.commitments.length > 0 && (
-                    <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                    <span className="px-2 py-0.5 rounded bg-zinc-100 text-black border border-zinc-300">
                       {meeting.commitments.length} {meeting.commitments.length === 1 ? 'commitment' : 'commitments'}
                     </span>
                   )}

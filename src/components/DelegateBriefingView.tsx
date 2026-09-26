@@ -64,9 +64,9 @@ export const DelegateBriefingView: React.FC<DelegateBriefingViewProps> = ({
 
       {/* Needs Your Attention (High Priority Card) */}
       {b.needsAttention && b.needsAttention.length > 0 && (
-        <div className="mb-6 p-4 rounded-lg bg-rose-50/70 border border-rose-200 text-zinc-900">
-          <div className="flex items-center gap-1.5 text-rose-900 font-semibold text-xs uppercase tracking-wider mb-2 font-mono">
-            <span>🔴 Needs Your Attention ({b.needsAttention.length})</span>
+        <div className="mb-6 p-4 rounded-lg bg-zinc-100 border border-black text-black">
+          <div className="flex items-center gap-1.5 text-black font-semibold text-xs uppercase tracking-wider mb-2 font-mono">
+            <span>Needs Your Attention ({b.needsAttention.length})</span>
           </div>
 
           <div className="space-y-2.5">
@@ -77,7 +77,7 @@ export const DelegateBriefingView: React.FC<DelegateBriefingViewProps> = ({
               return (
                 <div
                   key={na.id}
-                  className="p-3 rounded bg-white border border-rose-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  className="p-3 rounded bg-white border border-zinc-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div>
                     <p className="font-semibold text-zinc-900">{na.message}</p>
@@ -89,7 +89,7 @@ export const DelegateBriefingView: React.FC<DelegateBriefingViewProps> = ({
                       <span
                         className={`font-mono text-xs font-bold px-2 py-1 rounded ${
                           decisionState
-                            ? 'bg-emerald-100 text-emerald-800'
+                            ? 'bg-black text-white'
                             : 'bg-zinc-200 text-zinc-700'
                         }`}
                       >
@@ -99,7 +99,7 @@ export const DelegateBriefingView: React.FC<DelegateBriefingViewProps> = ({
                       <>
                         <button
                           onClick={() => handleApprove(na.id)}
-                          className="px-2.5 py-1 rounded bg-zinc-900 text-white hover:bg-zinc-800 text-xs font-medium"
+                          className="px-2.5 py-1 rounded bg-black text-white hover:bg-zinc-800 text-xs font-medium"
                         >
                           Approve
                         </button>
@@ -145,7 +145,7 @@ export const DelegateBriefingView: React.FC<DelegateBriefingViewProps> = ({
           <ul className="space-y-1 text-xs text-zinc-800">
             {b.decisions.map((dec, i) => (
               <li key={i} className="flex items-start gap-2">
-                <span className="text-emerald-600 font-bold">•</span>
+                <span className="text-black font-bold">•</span>
                 <span>{dec}</span>
               </li>
             ))}

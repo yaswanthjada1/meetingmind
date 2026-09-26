@@ -242,15 +242,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     title={!isExpanded ? item.label : undefined}
                     className={`w-full flex items-center rounded-xl text-xs font-medium transition-colors p-1.5 text-left group overflow-hidden ${
                       isActive
-                        ? 'bg-zinc-100 text-zinc-900 font-semibold shadow-2xs'
-                        : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50'
+                        ? 'bg-black text-white font-semibold shadow-xs'
+                        : 'text-zinc-600 hover:text-black hover:bg-zinc-100'
                     }`}
                   >
                     {/* Fixed 36px icon container with permanent w-4 h-4 icon */}
                     <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg">
                       <Icon
                         className={`w-4 h-4 shrink-0 transition-colors ${
-                          isActive ? 'text-zinc-900' : 'text-zinc-400 group-hover:text-zinc-700'
+                          isActive ? 'text-white' : 'text-zinc-500 group-hover:text-black'
                         }`}
                       />
                     </div>
@@ -272,9 +272,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {activeJobs.length > 0 && (
             <div className="p-3 border-t border-zinc-100 shrink-0">
               {isExpanded ? (
-                <div className="p-2.5 rounded-lg bg-amber-50/80 border border-amber-200/70 text-xs">
-                  <div className="flex items-center gap-1.5 text-amber-800 font-semibold mb-1">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600 shrink-0" />
+                <div className="p-2.5 rounded-lg bg-zinc-100 border border-zinc-300 text-xs">
+                  <div className="flex items-center gap-1.5 text-black font-semibold mb-1">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-black shrink-0" />
                     <span>Processing ({activeJobs.length})</span>
                   </div>
                   <div className="space-y-2 max-h-32 overflow-y-auto">
@@ -285,15 +285,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           onSelectMeeting?.(job.meetingId);
                           if (onCloseMobile) onCloseMobile();
                         }}
-                        className="cursor-pointer bg-white/70 hover:bg-white p-1.5 rounded border border-amber-200/50 transition-colors"
+                        className="cursor-pointer bg-white hover:bg-zinc-50 p-1.5 rounded border border-zinc-300 transition-colors"
                       >
-                        <div className="font-medium text-zinc-800 truncate text-[11px]">
+                        <div className="font-medium text-black truncate text-[11px]">
                           {job.meetingTitle}
                         </div>
-                        <div className="text-[10px] text-zinc-500 font-mono">{job.step}</div>
+                        <div className="text-[10px] text-zinc-600 font-mono">{job.step}</div>
                         <div className="w-full bg-zinc-200 h-1 rounded-full mt-1 overflow-hidden">
                           <div
-                            className="bg-amber-600 h-1 rounded-full transition-all duration-300"
+                            className="bg-black h-1 rounded-full transition-all duration-300"
                             style={{ width: `${job.progress}%` }}
                           />
                         </div>
@@ -303,10 +303,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               ) : (
                 <div
-                  className="w-9 h-9 mx-auto rounded-xl bg-amber-50 border border-amber-200/80 text-amber-600 flex items-center justify-center cursor-pointer shadow-2xs"
+                  className="w-9 h-9 mx-auto rounded-xl bg-zinc-100 border border-zinc-300 text-black flex items-center justify-center cursor-pointer shadow-2xs"
                   title={`Processing ${activeJobs.length} item(s)`}
                 >
-                  <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
+                  <Loader2 className="w-4 h-4 animate-spin text-black" />
                 </div>
               )}
             </div>
@@ -376,7 +376,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       onClearDemoData();
                     }
                   }}
-                  className="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2 text-rose-600 transition-colors"
+                  className="w-full text-left px-3 py-2 hover:bg-zinc-100 flex items-center gap-2 text-black transition-colors"
                 >
                   <Trash2 className="w-3.5 h-3.5 shrink-0" />
                   <span>Clear All Data</span>
@@ -390,7 +390,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   setIsUserMenuOpen(false);
                   onSignOut();
                 }}
-                className="w-full text-left px-3 py-2 hover:bg-zinc-50 flex items-center gap-2 text-zinc-600 hover:text-rose-700 transition-colors"
+                className="w-full text-left px-3 py-2 hover:bg-zinc-100 flex items-center gap-2 text-black transition-colors"
               >
                 <LogOut className="w-3.5 h-3.5 shrink-0" />
                 <span>Sign out</span>

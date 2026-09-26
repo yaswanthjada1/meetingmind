@@ -181,7 +181,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
             <button
               onClick={handleDelete}
               disabled={isDeleting}
-              className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+              className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-md transition-colors"
               title="Delete from knowledge base"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -217,12 +217,12 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
                     <div className="text-lg font-semibold text-zinc-900">{resource.pageCount || 1}</div>
                     <div className="text-[10px] text-zinc-400 font-mono mt-0.5">Pages / Sections</div>
                   </div>
-                  <div className="bg-emerald-50 border border-emerald-200/80 rounded-lg p-3 text-center">
-                    <div className="text-xs font-semibold text-emerald-800 flex items-center justify-center gap-1 mt-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <div className="bg-zinc-100 border border-zinc-300 rounded-lg p-3 text-center">
+                    <div className="text-xs font-semibold text-black flex items-center justify-center gap-1 mt-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-black" />
                       Indexed
                     </div>
-                    <div className="text-[10px] text-emerald-600 font-mono mt-0.5">Local RAG Store</div>
+                    <div className="text-[10px] text-zinc-600 font-mono mt-0.5">Local RAG Store</div>
                   </div>
                 </div>
               </div>

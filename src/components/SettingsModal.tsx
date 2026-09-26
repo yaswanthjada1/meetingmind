@@ -169,7 +169,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
             </div>
             {ollamaStatus.msg && (
-              <p className={`text-[10px] font-mono mt-1 ${ollamaStatus.ok ? 'text-emerald-700' : 'text-zinc-500'}`}>
+              <p className={`text-[10px] font-mono mt-1 ${ollamaStatus.ok ? 'text-black font-semibold' : 'text-zinc-500'}`}>
                 {ollamaStatus.msg}
               </p>
             )}
@@ -236,7 +236,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <button
               onClick={handleClearData}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-md"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-black hover:bg-zinc-100 border border-zinc-300 rounded-md"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Clear IndexedDB</span>
@@ -247,8 +247,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Footer Buttons */}
         <div className="flex items-center justify-between pt-4 border-t border-zinc-100">
           {isSaved ? (
-            <span className="text-xs text-emerald-700 font-mono flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Saved
+            <span className="text-xs text-black font-mono flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-black" /> Saved
             </span>
           ) : (
             <span />

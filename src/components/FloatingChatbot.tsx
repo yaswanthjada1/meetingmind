@@ -217,7 +217,7 @@ export const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ currentContext
                   onClick={toggleMic}
                   className={`p-2 rounded-lg transition-colors ${
                     isListening
-                      ? 'bg-rose-600 text-white animate-pulse'
+                      ? 'bg-black text-white animate-pulse'
                       : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
                   }`}
                   title="Voice input"

@@ -132,49 +132,49 @@ export const CalendarDashboard: React.FC<CalendarDashboardProps> = ({
 
   const selectedDayMeetings = getEventsForDate(selectedDayDate);
 
-  // Platform icon helper
+  // Platform icon helper (monochrome)
   const renderPlatformBadge = (platform?: MeetingPlatform) => {
     switch (platform) {
       case 'google_meet':
-        return <span className="text-[10px] text-emerald-700 font-medium">Meet</span>;
+        return <span className="text-[10px] text-black font-mono font-medium border border-zinc-200 bg-white px-1 rounded">Meet</span>;
       case 'zoom':
-        return <span className="text-[10px] text-blue-700 font-medium">Zoom</span>;
+        return <span className="text-[10px] text-black font-mono font-medium border border-zinc-200 bg-white px-1 rounded">Zoom</span>;
       case 'teams':
-        return <span className="text-[10px] text-indigo-700 font-medium">Teams</span>;
+        return <span className="text-[10px] text-black font-mono font-medium border border-zinc-200 bg-white px-1 rounded">Teams</span>;
       case 'in_person':
-        return <span className="text-[10px] text-amber-800 font-medium">In-person</span>;
+        return <span className="text-[10px] text-black font-mono font-medium border border-zinc-200 bg-white px-1 rounded">In-person</span>;
       case 'discord':
-        return <span className="text-[10px] text-purple-700 font-medium">Discord</span>;
+        return <span className="text-[10px] text-black font-mono font-medium border border-zinc-200 bg-white px-1 rounded">Discord</span>;
       case 'phone':
-        return <span className="text-[10px] text-rose-700 font-medium">Phone</span>;
+        return <span className="text-[10px] text-black font-mono font-medium border border-zinc-200 bg-white px-1 rounded">Phone</span>;
       default:
-        return <span className="text-[10px] text-zinc-600 font-medium">External</span>;
+        return <span className="text-[10px] text-zinc-600 font-mono font-medium border border-zinc-200 bg-white px-1 rounded">External</span>;
     }
   };
 
-  // State indicator helper
+  // State indicator helper (monochrome)
   const renderStatePill = (m: Meeting) => {
     const state = m.meetingState || (m.status === 'completed' ? 'completed' : 'upcoming');
     if (state === 'recording') {
       return (
-        <span className="flex items-center gap-1 text-[9px] font-mono text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded animate-pulse">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+        <span className="flex items-center gap-1 text-[9px] font-mono text-white bg-black px-1.5 py-0.5 rounded animate-pulse">
+          <span className="w-1.5 h-1.5 rounded-full bg-white" />
           Recording
         </span>
       );
     }
     if (state === 'processing') {
       return (
-        <span className="flex items-center gap-1 text-[9px] font-mono text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-spin" />
+        <span className="flex items-center gap-1 text-[9px] font-mono text-black bg-zinc-100 border border-black px-1.5 py-0.5 rounded">
+          <span className="w-1.5 h-1.5 rounded-full bg-black animate-spin" />
           Processing
         </span>
       );
     }
     if (state === 'completed') {
       return (
-        <span className="flex items-center gap-1 text-[9px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
-          <CheckCircle2 className="w-2.5 h-2.5" />
+        <span className="flex items-center gap-1 text-[9px] font-mono text-white bg-black px-1.5 py-0.5 rounded">
+          <CheckCircle2 className="w-2.5 h-2.5 text-white" />
           Processed
         </span>
       );
@@ -187,7 +187,7 @@ export const CalendarDashboard: React.FC<CalendarDashboardProps> = ({
       );
     }
     return (
-      <span className="text-[9px] font-mono text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">
+      <span className="text-[9px] font-mono text-black bg-zinc-100 border border-zinc-300 px-1.5 py-0.5 rounded">
         Upcoming
       </span>
     );
