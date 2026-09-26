@@ -53,6 +53,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
       <div className="bg-white border border-zinc-200 rounded-xl max-w-sm w-full p-8 shadow-xs">
         {/* Brand */}
         <div className="text-center mb-8">
+          <img
+            src="/logo.png"
+            alt="MeetingMind"
+            className="w-14 h-14 rounded-2xl mx-auto mb-3 shadow-md object-cover"
+          />
           <h1 className="text-xl font-semibold text-zinc-900 tracking-tight">
             MeetingMind
           </h1>
